@@ -117,6 +117,8 @@ fn apply_auth(mut builder: RequestBuilder, auth: &Option<AuthConfig>) -> Request
         }
         // ApiKey::Query is handled in build_url_with_params
         Some(AuthConfig::ApiKey { add_to: ApiKeyLocation::Query, .. }) => {}
+        // OAuth2 is resolved before reaching here (converted to Bearer in interpolate_auth)
+        Some(AuthConfig::Oauth2 { .. }) => {}
         Some(AuthConfig::None) | None => {}
     }
     builder

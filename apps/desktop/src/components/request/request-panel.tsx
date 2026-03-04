@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTabStore, useActiveTab } from "@/stores/tab-store";
 import { KeyValueEditor } from "./key-value-editor";
-import type { AuthConfig, BodyType } from "@apiark/types";
+import type { AuthConfig, BodyType, OAuth2GrantType, OAuthTokenStatus } from "@apiark/types";
+import { oauthStartFlow, oauthGetTokenStatus, oauthClearToken } from "@/lib/tauri-api";
 
 type Tab = "params" | "headers" | "body" | "auth" | "scripts" | "tests";
 
@@ -271,6 +272,11 @@ function BodyEditor({
   );
 }
 
+const INPUT_CLASS =
+  "w-full rounded bg-[var(--color-elevated)] px-3 py-1.5 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500";
+const SELECT_CLASS =
+  "rounded bg-[var(--color-elevated)] px-3 py-1.5 text-sm text-[var(--color-text-primary)] outline-none focus:ring-1 focus:ring-blue-500";
+
 function AuthEditor({
   auth,
   onChange,
@@ -298,14 +304,30 @@ function AuthEditor({
             case "api-key":
               onChange({ type: "api-key", key: "", value: "", addTo: "header" });
               break;
+            case "oauth2":
+              onChange({
+                type: "oauth2",
+                grantType: "authorization_code",
+                authUrl: "",
+                tokenUrl: "",
+                clientId: "",
+                clientSecret: "",
+                scope: "",
+                callbackUrl: "http://localhost:9876/callback",
+                username: "",
+                password: "",
+                usePkce: true,
+              });
+              break;
           }
         }}
-        className="rounded bg-[var(--color-elevated)] px-3 py-1.5 text-sm text-[var(--color-text-primary)] outline-none focus:ring-1 focus:ring-blue-500"
+        className={SELECT_CLASS}
       >
         <option value="none">No Auth</option>
         <option value="bearer">Bearer Token</option>
         <option value="basic">Basic Auth</option>
         <option value="api-key">API Key</option>
+        <option value="oauth2">OAuth 2.0</option>
       </select>
 
       {/* Auth fields */}
@@ -315,7 +337,7 @@ function AuthEditor({
           value={auth.token}
           onChange={(e) => onChange({ ...auth, token: e.target.value })}
           placeholder="Token"
-          className="w-full rounded bg-[var(--color-elevated)] px-3 py-1.5 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500"
+          className={INPUT_CLASS}
         />
       )}
 
@@ -326,14 +348,14 @@ function AuthEditor({
             value={auth.username}
             onChange={(e) => onChange({ ...auth, username: e.target.value })}
             placeholder="Username"
-            className="w-full rounded bg-[var(--color-elevated)] px-3 py-1.5 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500"
+            className={INPUT_CLASS}
           />
           <input
             type="password"
             value={auth.password}
             onChange={(e) => onChange({ ...auth, password: e.target.value })}
             placeholder="Password"
-            className="w-full rounded bg-[var(--color-elevated)] px-3 py-1.5 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500"
+            className={INPUT_CLASS}
           />
         </div>
       )}
@@ -345,25 +367,269 @@ function AuthEditor({
             value={auth.key}
             onChange={(e) => onChange({ ...auth, key: e.target.value })}
             placeholder="Key name (e.g. X-API-Key)"
-            className="w-full rounded bg-[var(--color-elevated)] px-3 py-1.5 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500"
+            className={INPUT_CLASS}
           />
           <input
             type="text"
             value={auth.value}
             onChange={(e) => onChange({ ...auth, value: e.target.value })}
             placeholder="Value"
-            className="w-full rounded bg-[var(--color-elevated)] px-3 py-1.5 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500"
+            className={INPUT_CLASS}
           />
           <select
             value={auth.addTo}
             onChange={(e) =>
               onChange({ ...auth, addTo: e.target.value as "header" | "query" })
             }
-            className="rounded bg-[var(--color-elevated)] px-3 py-1.5 text-sm text-[var(--color-text-primary)] outline-none focus:ring-1 focus:ring-blue-500"
+            className={SELECT_CLASS}
           >
             <option value="header">Header</option>
             <option value="query">Query Param</option>
           </select>
+        </div>
+      )}
+
+      {auth.type === "oauth2" && (
+        <OAuth2Editor auth={auth} onChange={onChange} />
+      )}
+    </div>
+  );
+}
+
+function OAuth2Editor({
+  auth,
+  onChange,
+}: {
+  auth: Extract<AuthConfig, { type: "oauth2" }>;
+  onChange: (auth: AuthConfig) => void;
+}) {
+  const [tokenStatus, setTokenStatus] = useState<OAuthTokenStatus | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const cacheKey = `${auth.clientId}:${auth.authUrl}`;
+
+  const refreshStatus = useCallback(async () => {
+    if (!auth.clientId) return;
+    try {
+      const status = await oauthGetTokenStatus(cacheKey);
+      setTokenStatus(status);
+    } catch {
+      // ignore - no token yet
+    }
+  }, [cacheKey, auth.clientId]);
+
+  useEffect(() => {
+    refreshStatus();
+  }, [refreshStatus]);
+
+  const handleGetToken = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await oauthStartFlow(auth);
+      await refreshStatus();
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "message" in err
+        ? (err as { message: string }).message
+        : String(err);
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearToken = async () => {
+    try {
+      await oauthClearToken(cacheKey);
+      setTokenStatus(null);
+    } catch {
+      // ignore
+    }
+  };
+
+  const showAuthUrl =
+    auth.grantType === "authorization_code" || auth.grantType === "implicit";
+  const showTokenUrl = auth.grantType !== "implicit";
+  const showPassword = auth.grantType === "password";
+  const showPkce = auth.grantType === "authorization_code";
+
+  return (
+    <div className="space-y-2">
+      {/* Grant Type */}
+      <label className="block">
+        <span className="text-xs text-[var(--color-text-secondary)]">Grant Type</span>
+        <select
+          value={auth.grantType}
+          onChange={(e) =>
+            onChange({ ...auth, grantType: e.target.value as OAuth2GrantType })
+          }
+          className={SELECT_CLASS + " w-full"}
+        >
+          <option value="authorization_code">Authorization Code</option>
+          <option value="client_credentials">Client Credentials</option>
+          <option value="implicit">Implicit</option>
+          <option value="password">Password</option>
+        </select>
+      </label>
+
+      {/* Auth URL */}
+      {showAuthUrl && (
+        <label className="block">
+          <span className="text-xs text-[var(--color-text-secondary)]">Auth URL</span>
+          <input
+            type="text"
+            value={auth.authUrl}
+            onChange={(e) => onChange({ ...auth, authUrl: e.target.value })}
+            placeholder="https://provider.com/oauth/authorize"
+            className={INPUT_CLASS}
+          />
+        </label>
+      )}
+
+      {/* Token URL */}
+      {showTokenUrl && (
+        <label className="block">
+          <span className="text-xs text-[var(--color-text-secondary)]">Token URL</span>
+          <input
+            type="text"
+            value={auth.tokenUrl}
+            onChange={(e) => onChange({ ...auth, tokenUrl: e.target.value })}
+            placeholder="https://provider.com/oauth/token"
+            className={INPUT_CLASS}
+          />
+        </label>
+      )}
+
+      {/* Client ID & Secret */}
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block">
+          <span className="text-xs text-[var(--color-text-secondary)]">Client ID</span>
+          <input
+            type="text"
+            value={auth.clientId}
+            onChange={(e) => onChange({ ...auth, clientId: e.target.value })}
+            placeholder="Client ID"
+            className={INPUT_CLASS}
+          />
+        </label>
+        <label className="block">
+          <span className="text-xs text-[var(--color-text-secondary)]">Client Secret</span>
+          <input
+            type="password"
+            value={auth.clientSecret}
+            onChange={(e) => onChange({ ...auth, clientSecret: e.target.value })}
+            placeholder="Client Secret"
+            className={INPUT_CLASS}
+          />
+        </label>
+      </div>
+
+      {/* Scope */}
+      <label className="block">
+        <span className="text-xs text-[var(--color-text-secondary)]">Scope</span>
+        <input
+          type="text"
+          value={auth.scope}
+          onChange={(e) => onChange({ ...auth, scope: e.target.value })}
+          placeholder="openid profile email"
+          className={INPUT_CLASS}
+        />
+      </label>
+
+      {/* Username & Password (password grant only) */}
+      {showPassword && (
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="text-xs text-[var(--color-text-secondary)]">Username</span>
+            <input
+              type="text"
+              value={auth.username}
+              onChange={(e) => onChange({ ...auth, username: e.target.value })}
+              placeholder="Username"
+              className={INPUT_CLASS}
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs text-[var(--color-text-secondary)]">Password</span>
+            <input
+              type="password"
+              value={auth.password}
+              onChange={(e) => onChange({ ...auth, password: e.target.value })}
+              placeholder="Password"
+              className={INPUT_CLASS}
+            />
+          </label>
+        </div>
+      )}
+
+      {/* Callback URL */}
+      {showAuthUrl && (
+        <label className="block">
+          <span className="text-xs text-[var(--color-text-secondary)]">Callback URL</span>
+          <input
+            type="text"
+            value={auth.callbackUrl}
+            onChange={(e) => onChange({ ...auth, callbackUrl: e.target.value })}
+            placeholder="http://localhost:9876/callback"
+            className={INPUT_CLASS}
+          />
+        </label>
+      )}
+
+      {/* PKCE */}
+      {showPkce && (
+        <label className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
+          <input
+            type="checkbox"
+            checked={auth.usePkce}
+            onChange={(e) => onChange({ ...auth, usePkce: e.target.checked })}
+            className="rounded"
+          />
+          Use PKCE (recommended)
+        </label>
+      )}
+
+      {/* Token Status & Actions */}
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          onClick={handleGetToken}
+          disabled={loading}
+          className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          {loading ? "Authenticating..." : "Get Token"}
+        </button>
+        {tokenStatus?.hasToken && (
+          <button
+            onClick={handleClearToken}
+            className="rounded bg-[var(--color-elevated)] px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+          >
+            Clear Token
+          </button>
+        )}
+      </div>
+
+      {/* Token status display */}
+      {tokenStatus?.hasToken && (
+        <div
+          className={`rounded px-3 py-1.5 text-xs ${
+            tokenStatus.isExpired
+              ? "bg-red-500/10 text-red-400"
+              : "bg-green-500/10 text-green-400"
+          }`}
+        >
+          {tokenStatus.isExpired
+            ? "Token expired"
+            : tokenStatus.expiresAt
+              ? `Token valid (expires ${new Date(tokenStatus.expiresAt * 1000).toLocaleTimeString()})`
+              : "Token valid (no expiry)"}
+        </div>
+      )}
+
+      {/* Error display */}
+      {error && (
+        <div className="rounded bg-red-500/10 px-3 py-1.5 text-xs text-red-400">
+          {error}
         </div>
       )}
     </div>

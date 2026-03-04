@@ -1,6 +1,7 @@
 mod commands;
 mod http;
 mod models;
+mod oauth;
 mod runner;
 mod scripting;
 mod sse;
@@ -18,12 +19,14 @@ use commands::greet;
 use commands::history::{clear_history, delete_history_entry, get_history, search_history, AppState};
 use commands::http::{send_request, send_request_with_scripts};
 use commands::curl::{export_curl_command, parse_curl_command};
+use commands::oauth::{oauth_clear_token, oauth_get_token_status, oauth_start_flow};
 use commands::runner::run_collection_command;
 use commands::sse::{sse_connect, sse_disconnect, SseManager};
 use commands::websocket::{ws_connect, ws_disconnect, ws_send};
 use websocket::manager::WsManager;
 use commands::settings::{get_settings, update_settings, SettingsState};
 use commands::state::{load_persisted_state, save_persisted_state};
+use oauth::OAuthTokenStore;
 use storage::history::HistoryDb;
 use storage::settings;
 
@@ -76,6 +79,7 @@ pub fn run() {
         .manage(settings_state)
         .manage(WsManager::new())
         .manage(SseManager::new())
+        .manage(OAuthTokenStore::new())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -116,6 +120,10 @@ pub fn run() {
             // SSE commands
             sse_connect,
             sse_disconnect,
+            // OAuth commands
+            oauth_start_flow,
+            oauth_get_token_status,
+            oauth_clear_token,
             // Settings commands
             get_settings,
             update_settings,

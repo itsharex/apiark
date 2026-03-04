@@ -6,10 +6,12 @@ use tauri::{AppHandle, Emitter};
 
 use crate::http::client::HttpEngine;
 use crate::http::interpolation;
+use crate::models::auth::AuthConfig;
 use crate::models::collection::{CollectionNode, RequestFile};
 use crate::models::request::{
     BodyType, HttpMethod, KeyValuePair, RequestBody, SendRequestParams,
 };
+use crate::oauth::OAuthTokenStore;
 use crate::scripting::assertions::evaluate_assertions_from_yaml;
 use crate::scripting::engine::execute_script;
 use crate::scripting::{ConsoleEntry, RequestSnapshot, ResponseSnapshot, ScriptContext, ScriptPhase};
@@ -128,11 +130,7 @@ fn interpolate_params(
     interpolated
 }
 
-fn interpolate_auth(
-    auth: &crate::models::auth::AuthConfig,
-    vars: &HashMap<String, String>,
-) -> crate::models::auth::AuthConfig {
-    use crate::models::auth::AuthConfig;
+fn interpolate_auth(auth: &AuthConfig, vars: &HashMap<String, String>) -> AuthConfig {
     match auth {
         AuthConfig::None => AuthConfig::None,
         AuthConfig::Bearer { token } => AuthConfig::Bearer {
@@ -146,6 +144,29 @@ fn interpolate_auth(
             key: interpolation::interpolate(key, vars),
             value: interpolation::interpolate(value, vars),
             add_to: add_to.clone(),
+        },
+        AuthConfig::Oauth2 {
+            grant_type,
+            auth_url,
+            token_url,
+            client_id,
+            client_secret,
+            scope,
+            callback_url,
+            username,
+            password,
+            use_pkce,
+        } => AuthConfig::Oauth2 {
+            grant_type: grant_type.clone(),
+            auth_url: interpolation::interpolate(auth_url, vars),
+            token_url: interpolation::interpolate(token_url, vars),
+            client_id: interpolation::interpolate(client_id, vars),
+            client_secret: interpolation::interpolate(client_secret, vars),
+            scope: interpolation::interpolate(scope, vars),
+            callback_url: interpolation::interpolate(callback_url, vars),
+            username: interpolation::interpolate(username, vars),
+            password: interpolation::interpolate(password, vars),
+            use_pkce: *use_pkce,
         },
     }
 }
@@ -164,9 +185,35 @@ async fn run_single_request(
     file: &RequestFile,
     vars: &mut HashMap<String, String>,
     _history_db: &Arc<HistoryDb>,
+    oauth_store: &OAuthTokenStore,
 ) -> RequestRunResult {
     let params = request_file_to_params(file);
-    let interpolated = interpolate_params(&params, vars);
+    let mut interpolated = interpolate_params(&params, vars);
+
+    // Resolve OAuth token if applicable
+    if let Some(AuthConfig::Oauth2 { ref client_id, ref auth_url, .. }) = interpolated.auth {
+        let key = OAuthTokenStore::cache_key(client_id, auth_url);
+        match oauth_store.get(&key) {
+            Some(token) if !token.is_expired() => {
+                interpolated.auth = Some(AuthConfig::Bearer { token: token.access_token });
+            }
+            _ => {
+                return RequestRunResult {
+                    name: file.name.clone(),
+                    method: format!("{:?}", interpolated.method),
+                    url: interpolated.url.clone(),
+                    status: None,
+                    time_ms: None,
+                    passed: false,
+                    test_count: 0,
+                    test_passed: 0,
+                    assertion_count: 0,
+                    assertion_passed: 0,
+                    error: Some("No valid OAuth token. Authenticate in the app first.".to_string()),
+                };
+            }
+        }
+    }
 
     let method_str = format!("{:?}", interpolated.method);
     let url_str = interpolated.url.clone();
@@ -299,6 +346,7 @@ pub async fn run_collection(
     app: AppHandle,
     config: RunConfig,
     history_db: Arc<HistoryDb>,
+    oauth_store: &OAuthTokenStore,
 ) -> Result<RunSummary, String> {
     let collection_path = Path::new(&config.collection_path);
     let tree = load_collection_tree(collection_path)?;
@@ -399,7 +447,7 @@ pub async fn run_collection(
                 }
             };
 
-            let result = run_single_request(&file, &mut vars, &history_db).await;
+            let result = run_single_request(&file, &mut vars, &history_db, oauth_store).await;
 
             // Emit progress event
             let _ = app.emit("runner:progress", RunProgress {

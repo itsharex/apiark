@@ -3,6 +3,7 @@ pub mod curl;
 pub mod environment;
 pub mod history;
 pub mod http;
+pub mod oauth;
 pub mod runner;
 pub mod settings;
 pub mod sse;

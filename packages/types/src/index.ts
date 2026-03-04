@@ -36,6 +36,12 @@ export interface RequestBody {
 
 // ── Auth (discriminated union matching Rust's tagged enum) ──
 
+export type OAuth2GrantType =
+  | "authorization_code"
+  | "client_credentials"
+  | "implicit"
+  | "password";
+
 export type AuthConfig =
   | { type: "none" }
   | { type: "bearer"; token: string }
@@ -45,7 +51,27 @@ export type AuthConfig =
       key: string;
       value: string;
       addTo: "header" | "query";
+    }
+  | {
+      type: "oauth2";
+      grantType: OAuth2GrantType;
+      authUrl: string;
+      tokenUrl: string;
+      clientId: string;
+      clientSecret: string;
+      scope: string;
+      callbackUrl: string;
+      username: string;
+      password: string;
+      usePkce: boolean;
     };
+
+export interface OAuthTokenStatus {
+  hasToken: boolean;
+  isExpired: boolean;
+  expiresAt: number | null;
+  tokenType: string | null;
+}
 
 // ── Proxy ──
 

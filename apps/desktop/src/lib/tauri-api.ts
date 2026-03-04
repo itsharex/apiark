@@ -13,6 +13,8 @@ import type {
   RunConfig,
   RunSummary,
   WsConnectParams,
+  AuthConfig,
+  OAuthTokenStatus,
 } from "@apiark/types";
 
 // ── Tauri environment detection ──
@@ -260,6 +262,24 @@ export async function sseConnect(connectionId: string, params: { url: string; he
 
 export async function sseDisconnect(connectionId: string): Promise<void> {
   return await invoke<void>("sse_disconnect", { connectionId });
+}
+
+// ── OAuth ──
+
+export async function oauthStartFlow(authConfig: AuthConfig): Promise<string> {
+  try {
+    return await invoke<string>("oauth_start_flow", { authConfig });
+  } catch (err) {
+    handleTauriError(err);
+  }
+}
+
+export async function oauthGetTokenStatus(key: string): Promise<OAuthTokenStatus> {
+  return await invoke<OAuthTokenStatus>("oauth_get_token_status", { key });
+}
+
+export async function oauthClearToken(key: string): Promise<void> {
+  return await invoke<void>("oauth_clear_token", { key });
 }
 
 // ── Settings ──

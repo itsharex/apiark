@@ -7,9 +7,11 @@ use tauri::State;
 use crate::commands::history::AppState;
 use crate::http::client::HttpEngine;
 use crate::http::interpolation;
+use crate::models::auth::AuthConfig;
 use crate::models::error::HttpError;
 use crate::models::request::{KeyValuePair, SendRequestParams};
 use crate::models::response::ResponseData;
+use crate::oauth::OAuthTokenStore;
 use crate::scripting::assertions::evaluate_assertions_from_yaml;
 use crate::scripting::engine::execute_script;
 use crate::scripting::{
@@ -41,13 +43,15 @@ pub struct ScriptedResponseData {
 #[tauri::command]
 pub async fn send_request(
     state: State<'_, AppState>,
+    oauth_store: State<'_, OAuthTokenStore>,
     params: SendRequestParams,
     variables: Option<HashMap<String, String>>,
     collection_path: Option<String>,
     request_name: Option<String>,
 ) -> Result<ResponseData, String> {
     let vars = variables.unwrap_or_default();
-    let interpolated = interpolate_params(&params, &vars);
+    let mut interpolated = interpolate_params(&params, &vars);
+    resolve_oauth_token(&mut interpolated, &oauth_store)?;
 
     tracing::info!(method = ?interpolated.method, url = %interpolated.url, "Sending request");
 
@@ -61,9 +65,11 @@ pub async fn send_request(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn send_request_with_scripts(
     state: State<'_, AppState>,
+    oauth_store: State<'_, OAuthTokenStore>,
     params: SendRequestParams,
     variables: Option<HashMap<String, String>>,
     collection_path: Option<String>,
@@ -75,6 +81,7 @@ pub async fn send_request_with_scripts(
 ) -> Result<ScriptedResponseData, String> {
     let mut vars = variables.unwrap_or_default();
     let mut interpolated = interpolate_params(&params, &vars);
+    resolve_oauth_token(&mut interpolated, &oauth_store)?;
 
     let mut all_console: Vec<ConsoleEntry> = Vec::new();
     let mut all_tests: Vec<TestResult> = Vec::new();
@@ -375,11 +382,7 @@ fn record_history(
     }
 }
 
-fn interpolate_auth(
-    auth: &crate::models::auth::AuthConfig,
-    vars: &HashMap<String, String>,
-) -> crate::models::auth::AuthConfig {
-    use crate::models::auth::AuthConfig;
+fn interpolate_auth(auth: &AuthConfig, vars: &HashMap<String, String>) -> AuthConfig {
     match auth {
         AuthConfig::None => AuthConfig::None,
         AuthConfig::Bearer { token } => AuthConfig::Bearer {
@@ -398,5 +401,61 @@ fn interpolate_auth(
             value: interpolation::interpolate(value, vars),
             add_to: add_to.clone(),
         },
+        AuthConfig::Oauth2 {
+            grant_type,
+            auth_url,
+            token_url,
+            client_id,
+            client_secret,
+            scope,
+            callback_url,
+            username,
+            password,
+            use_pkce,
+        } => AuthConfig::Oauth2 {
+            grant_type: grant_type.clone(),
+            auth_url: interpolation::interpolate(auth_url, vars),
+            token_url: interpolation::interpolate(token_url, vars),
+            client_id: interpolation::interpolate(client_id, vars),
+            client_secret: interpolation::interpolate(client_secret, vars),
+            scope: interpolation::interpolate(scope, vars),
+            callback_url: interpolation::interpolate(callback_url, vars),
+            username: interpolation::interpolate(username, vars),
+            password: interpolation::interpolate(password, vars),
+            use_pkce: *use_pkce,
+        },
+    }
+}
+
+/// If the auth is OAuth2, look up the cached token and convert to Bearer.
+fn resolve_oauth_token(
+    params: &mut SendRequestParams,
+    store: &OAuthTokenStore,
+) -> Result<(), String> {
+    if let Some(AuthConfig::Oauth2 {
+        client_id,
+        auth_url,
+        ..
+    }) = &params.auth
+    {
+        let key = OAuthTokenStore::cache_key(client_id, auth_url);
+        match store.get(&key) {
+            Some(token) if !token.is_expired() => {
+                params.auth = Some(AuthConfig::Bearer {
+                    token: token.access_token,
+                });
+                Ok(())
+            }
+            Some(_) => Err(
+                "OAuth token has expired. Please click \"Get Token\" to re-authenticate."
+                    .to_string(),
+            ),
+            None => Err(
+                "No OAuth token found. Please click \"Get Token\" to authenticate first."
+                    .to_string(),
+            ),
+        }
+    } else {
+        Ok(())
     }
 }
