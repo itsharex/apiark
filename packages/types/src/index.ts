@@ -1,3 +1,5 @@
+// ── HTTP Methods & Body Types ──
+
 export type HttpMethod =
   | "GET"
   | "POST"
@@ -16,20 +18,89 @@ export type BodyType =
   | "binary"
   | "none";
 
-export type AuthType =
-  | "none"
-  | "bearer"
-  | "basic"
-  | "api-key"
-  | "oauth2"
-  | "digest"
-  | "aws-sig-v4";
+// ── Key-Value Pair ──
 
 export interface KeyValuePair {
   key: string;
   value: string;
   enabled: boolean;
 }
+
+// ── Request Body ──
+
+export interface RequestBody {
+  type: BodyType;
+  content: string;
+  formData: KeyValuePair[];
+}
+
+// ── Auth (discriminated union matching Rust's tagged enum) ──
+
+export type AuthConfig =
+  | { type: "none" }
+  | { type: "bearer"; token: string }
+  | { type: "basic"; username: string; password: string }
+  | {
+      type: "api-key";
+      key: string;
+      value: string;
+      addTo: "header" | "query";
+    };
+
+// ── Proxy ──
+
+export interface ProxyConfig {
+  url: string;
+  username?: string;
+  password?: string;
+}
+
+// ── Send Request Params (matches Rust SendRequestParams) ──
+
+export interface SendRequestParams {
+  method: HttpMethod;
+  url: string;
+  headers: KeyValuePair[];
+  params: KeyValuePair[];
+  body?: RequestBody;
+  auth?: AuthConfig;
+  proxy?: ProxyConfig;
+  timeoutMs?: number;
+  followRedirects: boolean;
+  verifySsl: boolean;
+}
+
+// ── Response (matches Rust ResponseData) ──
+
+export interface CookieData {
+  name: string;
+  value: string;
+  domain?: string;
+  path?: string;
+  expires?: string;
+  httpOnly: boolean;
+  secure: boolean;
+}
+
+export interface ResponseData {
+  status: number;
+  statusText: string;
+  headers: KeyValuePair[];
+  cookies: CookieData[];
+  body: string;
+  timeMs: number;
+  sizeBytes: number;
+}
+
+// ── Error (matches Rust HttpError) ──
+
+export interface HttpError {
+  errorType: string;
+  message: string;
+  suggestion?: string;
+}
+
+// ── Collection & Environment (existing, kept for later use) ──
 
 export interface RequestConfig {
   name: string;
@@ -38,23 +109,8 @@ export interface RequestConfig {
   description?: string;
   headers?: KeyValuePair[];
   params?: KeyValuePair[];
-  body?: {
-    type: BodyType;
-    content: string;
-  };
-  auth?: {
-    type: AuthType;
-    [key: string]: unknown;
-  };
-}
-
-export interface ResponseData {
-  status: number;
-  statusText: string;
-  headers: Record<string, string>;
-  body: string;
-  time: number;
-  size: number;
+  body?: RequestBody;
+  auth?: AuthConfig;
 }
 
 export interface Environment {

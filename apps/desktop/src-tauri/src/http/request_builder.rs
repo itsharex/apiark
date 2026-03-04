@@ -1,0 +1,166 @@
+use reqwest::{Client, RequestBuilder};
+use std::time::Duration;
+use url::Url;
+
+use crate::models::auth::{ApiKeyLocation, AuthConfig};
+use crate::models::error::HttpEngineError;
+use crate::models::request::{BodyType, KeyValuePair, RequestBody, SendRequestParams};
+
+/// Default timeout: 30 seconds.
+const DEFAULT_TIMEOUT_MS: u64 = 30_000;
+
+/// Build a reqwest Client from request params.
+pub fn build_client(params: &SendRequestParams) -> Result<Client, HttpEngineError> {
+    let timeout = Duration::from_millis(params.timeout_ms.unwrap_or(DEFAULT_TIMEOUT_MS));
+
+    let mut builder = Client::builder()
+        .timeout(timeout)
+        .redirect(if params.follow_redirects {
+            reqwest::redirect::Policy::limited(10)
+        } else {
+            reqwest::redirect::Policy::none()
+        })
+        .cookie_store(true);
+
+    if !params.verify_ssl {
+        builder = builder.danger_accept_invalid_certs(true);
+    }
+
+    if let Some(proxy) = &params.proxy {
+        let mut reqwest_proxy = reqwest::Proxy::all(&proxy.url)
+            .map_err(|e| HttpEngineError::RequestError(format!("Invalid proxy URL: {}", e)))?;
+        if let (Some(user), Some(pass)) = (&proxy.username, &proxy.password) {
+            reqwest_proxy = reqwest_proxy.basic_auth(user, pass);
+        }
+        builder = builder.proxy(reqwest_proxy);
+    }
+
+    builder
+        .build()
+        .map_err(|e| HttpEngineError::RequestError(format!("Failed to build HTTP client: {}", e)))
+}
+
+/// Build the full URL with query parameters appended.
+pub fn build_url_with_params(
+    base_url: &str,
+    params: &[KeyValuePair],
+    auth: &Option<AuthConfig>,
+) -> Result<Url, HttpEngineError> {
+    let mut url =
+        Url::parse(base_url).map_err(|e| HttpEngineError::InvalidUrl(format!("{}: {}", e, base_url)))?;
+
+    // Add enabled query params
+    {
+        let mut query_pairs = url.query_pairs_mut();
+        for param in params.iter().filter(|p| p.enabled && !p.key.is_empty()) {
+            query_pairs.append_pair(&param.key, &param.value);
+        }
+
+        // Add API key to query if configured
+        if let Some(AuthConfig::ApiKey {
+            key,
+            value,
+            add_to: ApiKeyLocation::Query,
+        }) = auth
+        {
+            query_pairs.append_pair(key, value);
+        }
+    }
+
+    // Remove trailing `?` if no params were added
+    if url.query() == Some("") {
+        url.set_query(None);
+    }
+
+    Ok(url)
+}
+
+/// Build the reqwest RequestBuilder from our params.
+pub fn build_request(
+    client: &Client,
+    params: &SendRequestParams,
+) -> Result<RequestBuilder, HttpEngineError> {
+    let url = build_url_with_params(&params.url, &params.params, &params.auth)?;
+    let method = params.method.to_reqwest();
+
+    let mut builder = client.request(method, url);
+
+    // Apply headers
+    for header in params.headers.iter().filter(|h| h.enabled && !h.key.is_empty()) {
+        builder = builder.header(&header.key, &header.value);
+    }
+
+    // Apply auth
+    builder = apply_auth(builder, &params.auth);
+
+    // Apply body
+    builder = apply_body(builder, &params.body)?;
+
+    Ok(builder)
+}
+
+/// Apply authentication to the request builder.
+fn apply_auth(mut builder: RequestBuilder, auth: &Option<AuthConfig>) -> RequestBuilder {
+    match auth {
+        Some(AuthConfig::Bearer { token }) => {
+            builder = builder.bearer_auth(token);
+        }
+        Some(AuthConfig::Basic { username, password }) => {
+            builder = builder.basic_auth(username, Some(password));
+        }
+        Some(AuthConfig::ApiKey {
+            key,
+            value,
+            add_to: ApiKeyLocation::Header,
+        }) => {
+            builder = builder.header(key, value);
+        }
+        // ApiKey::Query is handled in build_url_with_params
+        Some(AuthConfig::ApiKey { add_to: ApiKeyLocation::Query, .. }) => {}
+        Some(AuthConfig::None) | None => {}
+    }
+    builder
+}
+
+/// Apply request body.
+fn apply_body(
+    builder: RequestBuilder,
+    body: &Option<RequestBody>,
+) -> Result<RequestBuilder, HttpEngineError> {
+    let body = match body {
+        Some(b) => b,
+        None => return Ok(builder),
+    };
+
+    match body.body_type {
+        BodyType::Json => Ok(builder
+            .header("Content-Type", "application/json")
+            .body(body.content.clone())),
+        BodyType::Xml => Ok(builder
+            .header("Content-Type", "application/xml")
+            .body(body.content.clone())),
+        BodyType::Raw => Ok(builder
+            .header("Content-Type", "text/plain")
+            .body(body.content.clone())),
+        BodyType::Urlencoded => {
+            let pairs: Vec<(String, String)> = body
+                .form_data
+                .iter()
+                .filter(|kv| kv.enabled && !kv.key.is_empty())
+                .map(|kv| (kv.key.clone(), kv.value.clone()))
+                .collect();
+            Ok(builder.form(&pairs))
+        }
+        BodyType::FormData => {
+            let mut form = reqwest::multipart::Form::new();
+            for kv in body.form_data.iter().filter(|kv| kv.enabled && !kv.key.is_empty()) {
+                form = form.text(kv.key.clone(), kv.value.clone());
+            }
+            Ok(builder.multipart(form))
+        }
+        BodyType::Binary => Ok(builder
+            .header("Content-Type", "application/octet-stream")
+            .body(body.content.clone().into_bytes())),
+        BodyType::None => Ok(builder),
+    }
+}

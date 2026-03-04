@@ -1,2 +1,4 @@
-// Shared data models — request, response, collection, environment, auth
-// Serde-serializable structs used across the application
+pub mod auth;
+pub mod error;
+pub mod request;
+pub mod response;

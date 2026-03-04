@@ -1,3 +1,7 @@
+import { UrlBar } from "@/components/request/url-bar";
+import { RequestPanel } from "@/components/request/request-panel";
+import { ResponsePanel } from "@/components/response/response-panel";
+
 function App() {
   return (
     <div className="flex h-screen bg-[#0a0a0b] text-[#e4e4e7]">
@@ -15,24 +19,20 @@ function App() {
       </aside>
 
       {/* Main Panel */}
-      <main className="flex flex-1 flex-col">
-        {/* Tab Bar */}
-        <div className="flex h-10 items-center border-b border-[#2a2a2e] bg-[#141416] px-2">
-          <span className="text-sm text-[#a1a1aa]">
-            Open a request from the sidebar, or press Ctrl+N to create one
-          </span>
-        </div>
+      <main className="flex flex-1 flex-col overflow-hidden">
+        {/* URL Bar */}
+        <UrlBar />
 
-        {/* Content */}
-        <div className="flex flex-1 items-center justify-center">
-          <div className="text-center">
-            <h2 className="mb-2 text-xl font-medium text-[#e4e4e7]">
-              Welcome to ApiArk
-            </h2>
-            <p className="text-sm text-[#a1a1aa]">
-              The API platform that respects your privacy, your RAM, and your
-              Git workflow.
-            </p>
+        {/* Request + Response split */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Request panel (top half) */}
+          <div className="flex w-1/2 flex-col border-r border-[#2a2a2e]">
+            <RequestPanel />
+          </div>
+
+          {/* Response panel (bottom half) */}
+          <div className="flex w-1/2 flex-col">
+            <ResponsePanel />
           </div>
         </div>
       </main>

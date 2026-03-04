@@ -4,6 +4,7 @@ mod models;
 mod storage;
 
 use commands::greet;
+use commands::http::send_request;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -19,7 +20,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_notification::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![greet, send_request])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
