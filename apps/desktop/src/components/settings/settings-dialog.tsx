@@ -2,6 +2,12 @@ import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, FolderOpen, Download, Upload, RefreshCw } from "lucide-react";
 import { useSettingsStore } from "@/stores/settings-store";
+import {
+  useShortcutsStore,
+  SHORTCUT_ACTIONS,
+  formatBindingParts,
+  bindingFromKeyboardEvent,
+} from "@/stores/shortcuts-store";
 import type { AppSettings } from "@apiark/types";
 import { open as openFileDialog, save as saveFileDialog } from "@tauri-apps/plugin-dialog";
 import { exportAppState, importAppState } from "@/lib/tauri-api";
@@ -106,6 +112,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   {([
                     { value: "horizontal" as const, label: "Side by Side" },
                     { value: "vertical" as const, label: "Stacked" },
+                    { value: "tabbed" as const, label: "Tabbed" },
                   ]).map((l) => (
                     <button
                       key={l.value}
@@ -599,42 +606,114 @@ function ToggleSwitch({
   );
 }
 
-const SHORTCUTS = [
-  { keys: "Ctrl+Enter", desc: "Send request" },
-  { keys: "Ctrl+N", desc: "New tab" },
-  { keys: "Ctrl+T", desc: "New tab" },
-  { keys: "Ctrl+W", desc: "Close tab" },
-  { keys: "Ctrl+S", desc: "Save request" },
-  { keys: "Ctrl+K", desc: "Command palette" },
-  { keys: "Ctrl+L", desc: "Focus URL bar" },
-  { keys: "Ctrl+E", desc: "Focus environment selector" },
-  { keys: "Ctrl+I", desc: "Import cURL" },
-  { keys: "Ctrl+,", desc: "Settings" },
-  { keys: "Ctrl+\\", desc: "Toggle sidebar" },
-  { keys: "Ctrl+.", desc: "Toggle Zen mode" },
-  { keys: "Ctrl+`", desc: "Toggle terminal" },
-  { keys: "Ctrl+Z", desc: "Undo" },
-  { keys: "Ctrl+Shift+Z", desc: "Redo" },
-  { keys: "Ctrl+Shift+N", desc: "New window" },
-  { keys: "Ctrl+Shift+A", desc: "AI assistant" },
-  { keys: "Escape", desc: "Exit Zen mode" },
-];
-
 function KeyboardShortcutsSection() {
+  const { getBinding, setBinding, resetAll, findConflicts } = useShortcutsStore();
+  const [recordingId, setRecordingId] = useState<string | null>(null);
+  const conflicts = findConflicts();
+
+  const conflictActions = new Set<string>();
+  for (const c of conflicts) {
+    for (const id of c.actionIds) conflictActions.add(id);
+  }
+
   return (
     <section>
       <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
         Keyboard Shortcuts
       </h3>
-      <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-        {SHORTCUTS.map((s) => (
-          <div key={s.keys} className="flex items-center justify-between py-1">
-            <span className="text-xs text-[var(--color-text-secondary)]">{s.desc}</span>
-            <kbd className="rounded border border-[var(--color-border)] bg-[var(--color-elevated)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--color-text-muted)]">
-              {s.keys}
-            </kbd>
-          </div>
-        ))}
+
+      {conflicts.length > 0 && (
+        <div className="mb-3 rounded bg-[var(--color-warning)]/10 px-3 py-2 text-xs text-[var(--color-warning)]">
+          Some shortcuts have conflicting bindings. Only one action will trigger per key combination.
+        </div>
+      )}
+
+      <div className="space-y-0.5">
+        {SHORTCUT_ACTIONS.map((action) => {
+          const binding = getBinding(action.id);
+          const isRecording = recordingId === action.id;
+          const hasConflict = conflictActions.has(action.id);
+          const parts = formatBindingParts(binding);
+
+          return (
+            <div
+              key={action.id}
+              className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-[var(--color-elevated)]"
+            >
+              <span className={`text-xs ${hasConflict ? "text-[var(--color-warning)]" : "text-[var(--color-text-secondary)]"}`}>
+                {action.description}
+              </span>
+              <div className="flex items-center gap-1.5">
+                {isRecording ? (
+                  <span
+                    className="rounded border border-[var(--color-accent)] bg-[var(--color-accent)]/10 px-2 py-0.5 text-[10px] text-[var(--color-accent)] animate-pulse"
+                    // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+                    tabIndex={0}
+                    ref={(el) => {
+                      if (el) {
+                        el.focus();
+                        const handler = (ev: KeyboardEvent) => {
+                          if (ev.key === "Escape") {
+                            ev.preventDefault();
+                            setRecordingId(null);
+                            el.removeEventListener("keydown", handler);
+                            return;
+                          }
+                          const b = bindingFromKeyboardEvent(ev);
+                          if (!b) return;
+                          ev.preventDefault();
+                          ev.stopPropagation();
+                          setBinding(action.id, b);
+                          setRecordingId(null);
+                          el.removeEventListener("keydown", handler);
+                        };
+                        el.addEventListener("keydown", handler);
+                      }
+                    }}
+                  >
+                    Press new shortcut...
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-0.5">
+                    {parts.map((part, i) => (
+                      <kbd
+                        key={i}
+                        className={`rounded border px-1.5 py-0.5 font-mono text-[10px] ${
+                          hasConflict
+                            ? "border-[var(--color-warning)]/50 bg-[var(--color-warning)]/10 text-[var(--color-warning)]"
+                            : "border-[var(--color-border)] bg-[var(--color-elevated)] text-[var(--color-text-muted)]"
+                        }`}
+                      >
+                        {part}
+                      </kbd>
+                    ))}
+                  </div>
+                )}
+                {!isRecording && (
+                  <button
+                    onClick={() => setRecordingId(action.id)}
+                    className="rounded px-1.5 py-0.5 text-[10px] text-[var(--color-text-dimmed)] hover:bg-[var(--color-border)] hover:text-[var(--color-text-secondary)]"
+                  >
+                    Rebind
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 flex items-center justify-between">
+        <span className="text-[10px] text-[var(--color-text-dimmed)]">
+          Escape always exits Zen mode (not customizable)
+        </span>
+        <button
+          onClick={resetAll}
+          className="flex items-center gap-1 rounded bg-[var(--color-elevated)] px-2.5 py-1 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-border)] hover:text-[var(--color-text-primary)]"
+        >
+          <RefreshCw className="h-3 w-3" />
+          Reset to Defaults
+        </button>
       </div>
     </section>
   );

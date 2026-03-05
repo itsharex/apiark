@@ -34,6 +34,7 @@ import { GuidedTour } from "@/components/onboarding/guided-tour";
 import { BottomPanel } from "@/components/layout/bottom-panel";
 import { useCollectionStore } from "@/stores/collection-store";
 import { AiAssistantDialog } from "@/components/ai/ai-assistant-dialog";
+import { useShortcutsStore } from "@/stores/shortcuts-store";
 import { AlertCircle, X, RefreshCw, FileX, GitMerge, Shield, ArrowRightLeft } from "lucide-react";
 import { ToastContainer } from "@/components/ui/toast-container";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -129,105 +130,80 @@ function App() {
   }, [activeView, sidePanelVisible]);
 
   // Keyboard shortcuts
+  const matchShortcut = useShortcutsStore((s) => s.matchShortcut);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Escape exits zen mode
+      // Escape exits zen mode (not customizable)
       if (e.key === "Escape" && zenMode) {
         e.preventDefault();
         setZenMode(false);
         return;
       }
 
-      const mod = e.ctrlKey || e.metaKey;
-      if (!mod) return;
+      const action = matchShortcut(e);
+      if (!action) return;
 
-      // Ctrl+` to toggle terminal
-      if (e.key === "`" && mod) {
-        e.preventDefault();
-        setTerminalOpen((p) => !p);
-        return;
-      }
+      e.preventDefault();
 
-      // Ctrl+Shift+Z = redo (handled below), Ctrl+. = zen mode
-      if (e.key === "." && mod) {
-        e.preventDefault();
-        setZenMode((prev) => !prev);
-        return;
-      }
-
-      switch (e.key.toLowerCase()) {
-        case "n":
-          e.preventDefault();
-          if (e.shiftKey) {
-            import("@/lib/tauri-api").then((m) => m.openNewWindow().catch(() => {}));
-          } else {
-            newTab();
-          }
-          break;
-        case "t":
-          e.preventDefault();
+      switch (action) {
+        case "newTab":
           newTab();
           break;
-        case "w":
-          e.preventDefault();
+        case "newWindow":
+          import("@/lib/tauri-api").then((m) => m.openNewWindow().catch(() => {}));
+          break;
+        case "closeTab":
           if (activeTab) closeTab(activeTab.id);
           break;
-        case "s":
-          e.preventDefault();
+        case "save":
           save();
           break;
-        case ",":
-          e.preventDefault();
-          setSettingsOpen(true);
-          break;
-        case "i":
-          e.preventDefault();
-          setCurlImportOpen(true);
-          break;
-        case "k":
-          e.preventDefault();
-          setCommandPaletteOpen(true);
-          break;
-        case "a":
-          if (e.shiftKey) {
-            e.preventDefault();
-            setAiOpen(true);
-          }
-          break;
-        case "e":
-          e.preventDefault();
-          envSelectorRef.current?.focus();
-          break;
-        case "l":
-          e.preventDefault();
-          urlBarRef.current?.focus();
-          break;
-        case "\\":
-          e.preventDefault();
-          setSidePanelVisible((prev) => !prev);
-          break;
-        case "enter":
-          e.preventDefault();
+        case "send":
           send();
           break;
-        case "z":
-          e.preventDefault();
-          if (e.shiftKey) {
-            redoTab();
-          } else {
-            undoTab();
-          }
+        case "settings":
+          setSettingsOpen(true);
           break;
-        case "y":
-          e.preventDefault();
+        case "curlImport":
+          setCurlImportOpen(true);
+          break;
+        case "commandPalette":
+          setCommandPaletteOpen(true);
+          break;
+        case "focusUrl":
+          urlBarRef.current?.focus();
+          break;
+        case "focusEnv":
+          envSelectorRef.current?.focus();
+          break;
+        case "toggleSidebar":
+          setSidePanelVisible((prev) => !prev);
+          break;
+        case "toggleZen":
+          setZenMode((prev) => !prev);
+          break;
+        case "toggleTerminal":
+          setTerminalOpen((p) => !p);
+          break;
+        case "undo":
+          undoTab();
+          break;
+        case "redo":
           redoTab();
+          break;
+        case "aiAssistant":
+          setAiOpen(true);
+          break;
+        case "toggleConsole":
+          useConsoleStore.getState().toggle();
           break;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [newTab, closeTab, save, send, undoTab, redoTab, activeTab, zenMode]);
+  }, [newTab, closeTab, save, send, undoTab, redoTab, activeTab, zenMode, matchShortcut]);
 
   // Listen for terminal toggle from command palette
   useEffect(() => {
@@ -407,7 +383,9 @@ function ProtocolView({
   const { updateSettings } = useSettingsStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const requestPanelRef = useRef<HTMLDivElement>(null);
+  const [tabbedActivePanel, setTabbedActivePanel] = useState<"request" | "response">("request");
 
+  const isTabbed = layout === "tabbed";
   const isVertical = isCompact || layout === "vertical";
 
   const handleResizeEnd = useCallback(
@@ -441,35 +419,74 @@ function ProtocolView({
         <>
           <Breadcrumb />
           <UrlBar ref={urlBarRef} />
-          <div
-            ref={containerRef}
-            className={`flex flex-1 overflow-hidden ${isVertical ? "flex-col" : "flex-row"}`}
-          >
-            <div
-              ref={requestPanelRef}
-              data-tour="request-panel"
-              className="flex shrink-0 flex-col overflow-hidden"
-              style={isVertical
-                ? { height: `${panelRatio * 100}%` }
-                : { width: `${panelRatio * 100}%` }
-              }
-            >
-              <RequestPanel />
+          {isTabbed ? (
+            <div className="flex flex-1 flex-col overflow-hidden">
+              {/* Tabbed layout panel switcher */}
+              <div className="flex shrink-0 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+                <button
+                  onClick={() => setTabbedActivePanel("request")}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    tabbedActivePanel === "request"
+                      ? "border-b-2 border-[var(--color-accent)] text-[var(--color-accent)]"
+                      : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                  }`}
+                >
+                  Request
+                </button>
+                <button
+                  onClick={() => setTabbedActivePanel("response")}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    tabbedActivePanel === "response"
+                      ? "border-b-2 border-[var(--color-accent)] text-[var(--color-accent)]"
+                      : "text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                  }`}
+                >
+                  Response
+                </button>
+              </div>
+              <div className="flex flex-1 flex-col overflow-hidden">
+                {tabbedActivePanel === "request" ? (
+                  <div data-tour="request-panel" className="flex flex-1 flex-col overflow-hidden">
+                    <RequestPanel />
+                  </div>
+                ) : (
+                  <div data-tour="response-panel" className="flex flex-1 flex-col overflow-hidden">
+                    <ResponsePanel />
+                  </div>
+                )}
+              </div>
             </div>
-            <PanelDivider
-              direction={isVertical ? "vertical" : "horizontal"}
-              containerRef={containerRef}
-              panelRef={requestPanelRef}
-              onResizeEnd={handleResizeEnd}
-              onDoubleClick={handleDoubleClick}
-            />
+          ) : (
             <div
-              data-tour="response-panel"
-              className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+              ref={containerRef}
+              className={`flex flex-1 overflow-hidden ${isVertical ? "flex-col" : "flex-row"}`}
             >
-              <ResponsePanel />
+              <div
+                ref={requestPanelRef}
+                data-tour="request-panel"
+                className="flex shrink-0 flex-col overflow-hidden"
+                style={isVertical
+                  ? { height: `${panelRatio * 100}%` }
+                  : { width: `${panelRatio * 100}%` }
+                }
+              >
+                <RequestPanel />
+              </div>
+              <PanelDivider
+                direction={isVertical ? "vertical" : "horizontal"}
+                containerRef={containerRef}
+                panelRef={requestPanelRef}
+                onResizeEnd={handleResizeEnd}
+                onDoubleClick={handleDoubleClick}
+              />
+              <div
+                data-tour="response-panel"
+                className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+              >
+                <ResponsePanel />
+              </div>
             </div>
-          </div>
+          )}
         </>
       );
   }

@@ -303,7 +303,7 @@ export interface AppSettings {
   aiApiKey: string | null;
   aiModel: string | null;
   panelRatio: number;
-  layout: "horizontal" | "vertical";
+  layout: "horizontal" | "vertical" | "tabbed";
 }
 
 // ── Tab Protocol ──

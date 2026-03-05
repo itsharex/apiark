@@ -4,7 +4,7 @@ import { useMockStore } from "@/stores/mock-store";
 import { useMonitorStore } from "@/stores/monitor-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useConsoleStore } from "@/stores/console-store";
-import { Globe, FolderOpen, Server, Activity, Columns2, Rows2, Terminal, ScrollText } from "lucide-react";
+import { Globe, FolderOpen, Server, Activity, Columns2, Rows2, LayoutList, Terminal, ScrollText } from "lucide-react";
 import type { AppSettings } from "@apiark/types";
 
 interface StatusBarProps {
@@ -28,7 +28,8 @@ export function StatusBar({ onToggleTerminal, terminalOpen }: StatusBarProps) {
   const activeMonitors = monitors.filter((m) => m.enabled).length;
 
   const toggleLayout = () => {
-    const next: AppSettings["layout"] = layout === "horizontal" ? "vertical" : "horizontal";
+    const order: AppSettings["layout"][] = ["horizontal", "vertical", "tabbed"];
+    const next = order[(order.indexOf(layout) + 1) % order.length];
     updateSettings({ layout: next });
   };
 
@@ -103,12 +104,20 @@ export function StatusBar({ onToggleTerminal, terminalOpen }: StatusBarProps) {
         <button
           onClick={toggleLayout}
           className="flex items-center gap-1 text-[var(--color-text-dimmed)] transition-colors hover:text-[var(--color-text-secondary)]"
-          title={layout === "horizontal" ? "Switch to stacked layout" : "Switch to side-by-side layout"}
+          title={
+            layout === "horizontal"
+              ? "Switch to stacked layout"
+              : layout === "vertical"
+                ? "Switch to tabbed layout"
+                : "Switch to side-by-side layout"
+          }
         >
           {layout === "horizontal" ? (
             <Columns2 className="h-3 w-3" />
-          ) : (
+          ) : layout === "vertical" ? (
             <Rows2 className="h-3 w-3" />
+          ) : (
+            <LayoutList className="h-3 w-3" />
           )}
         </button>
 
