@@ -36,6 +36,7 @@ import { useCollectionStore } from "@/stores/collection-store";
 import { AiAssistantDialog } from "@/components/ai/ai-assistant-dialog";
 import { AlertCircle, X, RefreshCw, FileX, GitMerge, Shield, Zap } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { useResponsive } from "@/hooks/use-responsive";
 
 function App() {
   const { newTab, closeTab, save, send, persistTabs, restoreTabs, undoTab, redoTab } = useTabStore();
@@ -57,6 +58,7 @@ function App() {
   const [sidePanelVisible, setSidePanelVisible] = useState(true);
   const urlBarRef = useRef<HTMLInputElement>(null);
   const envSelectorRef = useRef<HTMLSelectElement>(null);
+  const { isCompact } = useResponsive();
 
   useTheme();
   useFileWatcher();
@@ -271,7 +273,7 @@ function App() {
         />
 
         {/* Side Panel */}
-        {sidePanelVisible && (
+        {sidePanelVisible && !isCompact && (
           <SidePanel
             activeView={activeView}
             envSelectorRef={envSelectorRef}
@@ -345,6 +347,8 @@ function ProtocolView({
   protocol: TabProtocol;
   urlBarRef: React.RefObject<HTMLInputElement | null>;
 }) {
+  const { isCompact } = useResponsive();
+
   switch (protocol) {
     case "graphql":
       return <GraphQLView />;
@@ -358,11 +362,11 @@ function ProtocolView({
       return (
         <>
           <UrlBar ref={urlBarRef} />
-          <div className="flex flex-1 overflow-hidden">
-            <div data-tour="request-panel" className="flex w-1/2 flex-col border-r border-[var(--color-border)]">
+          <div className={`flex flex-1 overflow-hidden ${isCompact ? "flex-col" : "flex-row"}`}>
+            <div data-tour="request-panel" className={`flex flex-col ${isCompact ? "h-1/2 border-b" : "w-1/2 border-r"} border-[var(--color-border)]`}>
               <RequestPanel />
             </div>
-            <div data-tour="response-panel" className="flex w-1/2 flex-col">
+            <div data-tour="response-panel" className={`flex flex-col ${isCompact ? "h-1/2" : "w-1/2"}`}>
               <ResponsePanel />
             </div>
           </div>
