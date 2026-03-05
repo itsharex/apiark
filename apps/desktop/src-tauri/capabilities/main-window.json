@@ -14,7 +14,13 @@
     "dialog:allow-save",
     "dialog:allow-message",
     "dialog:allow-ask",
-    "shell:allow-open",
+    {
+      "identifier": "shell:allow-open",
+      "allow": [
+        { "url": "https://**" },
+        { "url": "http://**" }
+      ]
+    },
     "notification:default",
     "notification:allow-notify",
     "notification:allow-is-permission-granted",
