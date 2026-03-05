@@ -24,7 +24,7 @@ use commands::collection::{
 use commands::environment::{get_resolved_variables, load_environments, save_environment};
 use commands::greet;
 use commands::history::{clear_history, delete_history_entry, get_history, search_history, AppState};
-use commands::http::{send_request, send_request_with_scripts};
+use commands::http::{read_full_response, send_request, send_request_with_scripts};
 use commands::curl::{export_curl_command, parse_curl_command};
 use commands::import_export::{detect_import_format, export_collection, import_collection, import_preview};
 use commands::oauth::{oauth_clear_token, oauth_get_token_status, oauth_start_flow};
@@ -122,6 +122,7 @@ pub fn run() {
             greet,
             send_request,
             send_request_with_scripts,
+            read_full_response,
             // Collection commands
             open_collection,
             read_request_file,

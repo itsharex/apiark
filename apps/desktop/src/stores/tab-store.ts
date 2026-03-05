@@ -5,6 +5,7 @@ import type {
   RequestBody,
   AuthConfig,
   HttpError,
+  ResponseData,
   Tab,
   TabSnapshot,
   RequestFile,
@@ -65,6 +66,7 @@ interface TabState {
   autoSave: () => Promise<void>;
   clearAutoSaveError: () => void;
   clearResponse: () => void;
+  updateResponse: (tabId: string, updates: Partial<ResponseData>) => void;
   hasUnsavedNewTabs: () => boolean;
 
   // Undo/Redo
@@ -610,6 +612,16 @@ export const useTabStore = create<TabState>((set, get) => ({
 
   clearResponse: () => {
     set((state) => updateActiveTab(state, () => ({ response: null, error: null })));
+  },
+
+  updateResponse: (tabId: string, updates: Partial<ResponseData>) => {
+    set((state) => ({
+      tabs: state.tabs.map((t) =>
+        t.id === tabId && t.response
+          ? { ...t, response: { ...t.response, ...updates } }
+          : t
+      ),
+    }));
   },
 
   undoTab: () => {

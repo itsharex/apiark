@@ -132,6 +132,9 @@ export interface ResponseData {
   body: string;
   timeMs: number;
   sizeBytes: number;
+  truncated?: boolean;
+  fullSize?: number;
+  tempPath?: string;
 }
 
 // ── Error (matches Rust HttpError) ──

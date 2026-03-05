@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { CollectionNode, HttpMethod } from "@apiark/types";
 import { useCollectionStore } from "@/stores/collection-store";
 import { useTabStore } from "@/stores/tab-store";
@@ -34,6 +34,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 const METHOD_COLORS: Record<HttpMethod, string> = {
   GET: "text-green-500",
@@ -45,26 +46,23 @@ const METHOD_COLORS: Record<HttpMethod, string> = {
   OPTIONS: "text-gray-500",
 };
 
-interface CollectionTreeProps {
-  nodes: CollectionNode[];
+// ── Flat node type for virtualization ──
+
+interface FlatNode {
+  node: CollectionNode;
+  depth: number;
   collectionPath: string;
   collectionName: string;
-  depth?: number;
-  searchQuery?: string;
+  /** Parent directory path for DnD sibling grouping */
+  parentDir: string;
 }
 
-/** Get the directory of a node (its parent directory path) */
-function getNodeDir(node: CollectionNode): string {
-  const path = node.path;
-  const lastSep = path.lastIndexOf("/");
-  return lastSep >= 0 ? path.substring(0, lastSep) : path;
-}
+// ── Utility functions ──
 
 /** Get the order key for a node (file stem for requests, folder name for folders) */
 function getOrderKey(node: CollectionNode): string {
   const path = node.path;
   const name = path.substring(path.lastIndexOf("/") + 1);
-  // For request files, strip .yaml/.yml extension
   if (node.type === "request") {
     return name.replace(/\.(yaml|yml)$/, "");
   }
@@ -82,52 +80,132 @@ function nodeMatchesSearch(node: CollectionNode, query: string): boolean {
   return false;
 }
 
+/** Flatten the tree into a virtual list, respecting expanded state and search */
+function flattenTree(
+  nodes: CollectionNode[],
+  expandedPaths: Set<string>,
+  collectionPath: string,
+  collectionName: string,
+  searchQuery: string,
+  depth: number,
+  parentDir: string,
+  result: FlatNode[],
+): void {
+  const filtered = searchQuery
+    ? nodes.filter((n) => nodeMatchesSearch(n, searchQuery))
+    : nodes;
+
+  for (const node of filtered) {
+    result.push({ node, depth, collectionPath, collectionName, parentDir });
+
+    if (node.type !== "request") {
+      const isExpanded = expandedPaths.has(node.path) || !!searchQuery;
+      if (isExpanded && node.children.length > 0) {
+        flattenTree(
+          node.children,
+          expandedPaths,
+          collectionPath,
+          node.type === "collection" ? node.name : collectionName,
+          searchQuery,
+          depth + 1,
+          node.path,
+          result,
+        );
+      }
+    }
+  }
+}
+
+// ── Main component ──
+
+interface CollectionTreeProps {
+  nodes: CollectionNode[];
+  collectionPath: string;
+  collectionName: string;
+  searchQuery?: string;
+  parentRef?: React.RefObject<HTMLDivElement | null>;
+}
+
+const ROW_HEIGHT = 28;
+
 export function CollectionTree({
   nodes,
   collectionPath,
   collectionName,
-  depth = 0,
   searchQuery = "",
+  parentRef: externalParentRef,
 }: CollectionTreeProps) {
+  const { expandedPaths, refreshCollection } = useCollectionStore();
+  const internalParentRef = useRef<HTMLDivElement>(null);
+  const scrollRef = externalParentRef ?? internalParentRef;
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
     }),
   );
 
-  const { refreshCollection } = useCollectionStore();
+  const flatNodes = useMemo(() => {
+    const result: FlatNode[] = [];
+    flattenTree(
+      nodes,
+      expandedPaths,
+      collectionPath,
+      collectionName,
+      searchQuery,
+      0,
+      collectionPath,
+      result,
+    );
+    return result;
+  }, [nodes, expandedPaths, collectionPath, collectionName, searchQuery]);
 
-  const filteredNodes = searchQuery
-    ? nodes.filter((node) => nodeMatchesSearch(node, searchQuery))
-    : nodes;
+  const virtualizer = useVirtualizer({
+    count: flatNodes.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 15,
+  });
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
 
-    const fromIndex = filteredNodes.findIndex((n) => n.path === active.id);
-    const toIndex = filteredNodes.findIndex((n) => n.path === over.id);
-    if (fromIndex === -1 || toIndex === -1) return;
+      const activeFlat = flatNodes.find((f) => f.node.path === active.id);
+      const overFlat = flatNodes.find((f) => f.node.path === over.id);
+      if (!activeFlat || !overFlat) return;
 
-    // Build new order
-    const reordered = [...filteredNodes];
-    const [moved] = reordered.splice(fromIndex, 1);
-    reordered.splice(toIndex, 0, moved);
+      // Only allow reordering within the same parent
+      if (activeFlat.parentDir !== overFlat.parentDir) return;
 
-    // Determine the parent directory
-    const parentDir = getNodeDir(filteredNodes[0]);
+      // Get all siblings at the same parent
+      const siblings = flatNodes.filter(
+        (f) => f.parentDir === activeFlat.parentDir && f.depth === activeFlat.depth,
+      );
 
-    // Save order to _folder.yaml
-    const order = reordered.map(getOrderKey);
-    try {
-      await saveFolderOrder(parentDir, order);
-      await refreshCollection(collectionPath);
-    } catch (err) {
-      console.error("Failed to save folder order:", err);
-    }
-  };
+      const fromIdx = siblings.findIndex((f) => f.node.path === active.id);
+      const toIdx = siblings.findIndex((f) => f.node.path === over.id);
+      if (fromIdx === -1 || toIdx === -1) return;
 
-  if (filteredNodes.length === 0) return null;
+      const reordered = [...siblings];
+      const [moved] = reordered.splice(fromIdx, 1);
+      reordered.splice(toIdx, 0, moved);
+
+      const order = reordered.map((f) => getOrderKey(f.node));
+      try {
+        await saveFolderOrder(activeFlat.parentDir, order);
+        await refreshCollection(collectionPath);
+      } catch (err) {
+        console.error("Failed to save folder order:", err);
+      }
+    },
+    [flatNodes, refreshCollection, collectionPath],
+  );
+
+  if (flatNodes.length === 0) return null;
+
+  const needsOwnScroll = !externalParentRef;
 
   return (
     <DndContext
@@ -136,39 +214,72 @@ export function CollectionTree({
       onDragEnd={handleDragEnd}
     >
       <SortableContext
-        items={filteredNodes.map((n) => n.path)}
+        items={flatNodes.map((f) => f.node.path)}
         strategy={verticalListSortingStrategy}
       >
-        <div>
-          {filteredNodes.map((node) => (
-            <SortableTreeNode
-              key={node.path}
-              node={node}
-              collectionPath={collectionPath}
-              collectionName={collectionName}
-              depth={depth}
-              searchQuery={searchQuery}
-            />
-          ))}
-        </div>
+        {needsOwnScroll ? (
+          <div ref={internalParentRef} style={{ overflow: "auto", maxHeight: "100%" }}>
+            <div
+              style={{
+                height: `${virtualizer.getTotalSize()}px`,
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              {virtualizer.getVirtualItems().map((virtualRow) => {
+                const flat = flatNodes[virtualRow.index];
+                return (
+                  <VirtualRow
+                    key={flat.node.path}
+                    flat={flat}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const flat = flatNodes[virtualRow.index];
+              return (
+                <VirtualRow
+                  key={flat.node.path}
+                  flat={flat}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
       </SortableContext>
     </DndContext>
   );
 }
 
-function SortableTreeNode({
-  node,
-  collectionPath,
-  collectionName,
-  depth,
-  searchQuery,
-}: {
-  node: CollectionNode;
-  collectionPath: string;
-  collectionName: string;
-  depth: number;
-  searchQuery: string;
-}) {
+// ── Virtual row wrapper with DnD ──
+
+function VirtualRow({ flat, style }: { flat: FlatNode; style: React.CSSProperties }) {
   const {
     attributes,
     listeners,
@@ -176,43 +287,35 @@ function SortableTreeNode({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: node.path });
+  } = useSortable({ id: flat.node.path });
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
+  const dndStyle: React.CSSProperties = {
+    ...style,
+    transform: CSS.Transform.toString(transform) || style.transform as string,
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
-      <TreeNode
-        node={node}
-        collectionPath={collectionPath}
-        collectionName={collectionName}
-        depth={depth}
-        searchQuery={searchQuery}
+    <div ref={setNodeRef} style={dndStyle}>
+      <TreeNodeRow
+        flat={flat}
         dragHandleProps={{ ...attributes, ...listeners }}
       />
     </div>
   );
 }
 
-function TreeNode({
-  node,
-  collectionPath,
-  collectionName,
-  depth,
-  searchQuery,
+// ── Individual tree node row ──
+
+function TreeNodeRow({
+  flat,
   dragHandleProps,
 }: {
-  node: CollectionNode;
-  collectionPath: string;
-  collectionName: string;
-  depth: number;
-  searchQuery: string;
-  dragHandleProps?: Record<string, unknown>;
+  flat: FlatNode;
+  dragHandleProps: Record<string, unknown>;
 }) {
+  const { node, depth, collectionPath, collectionName } = flat;
   const { expandedPaths, toggleExpand, createRequest, createFolder, deleteItem, renameItem } =
     useCollectionStore();
   const { openTab } = useTabStore();
@@ -220,7 +323,7 @@ function TreeNode({
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
 
-  const isExpanded = expandedPaths.has(node.path) || !!searchQuery;
+  const isExpanded = expandedPaths.has(node.path);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -333,8 +436,6 @@ function TreeNode({
   }
 
   // Folder or Collection
-  const children = node.children;
-
   return (
     <>
       <button
@@ -379,16 +480,6 @@ function TreeNode({
           <span className="truncate text-[var(--color-text-primary)]">{node.name}</span>
         )}
       </button>
-
-      {isExpanded && children.length > 0 && (
-        <CollectionTree
-          nodes={children}
-          collectionPath={collectionPath}
-          collectionName={node.type === "collection" ? node.name : collectionName}
-          depth={depth + 1}
-          searchQuery={searchQuery}
-        />
-      )}
 
       {contextMenu && (
         <ContextMenu
@@ -443,6 +534,8 @@ function TreeNode({
     </>
   );
 }
+
+// ── Context menu ──
 
 function ContextMenu({
   x,

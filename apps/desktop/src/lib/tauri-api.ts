@@ -115,6 +115,10 @@ export async function sendRequestWithScripts(
   }
 }
 
+export async function readFullResponse(path: string): Promise<string> {
+  return await invoke<string>("read_full_response", { path });
+}
+
 // ── Collections ──
 
 export async function openCollection(path: string): Promise<CollectionNode> {

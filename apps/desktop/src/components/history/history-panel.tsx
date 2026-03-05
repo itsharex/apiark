@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { HttpMethod } from "@apiark/types";
 import { useHistoryStore } from "@/stores/history-store";
 import { useTabStore } from "@/stores/tab-store";
 import { Search, Trash2 } from "lucide-react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 const METHOD_COLORS: Record<string, string> = {
   GET: "text-green-500",
@@ -32,10 +33,13 @@ function timeAgo(timestamp: string): string {
   return `${days}d ago`;
 }
 
+const ROW_HEIGHT = 32;
+
 export function HistoryPanel() {
   const { entries, loading, loadHistory, searchHistory, clearHistory } =
     useHistoryStore();
   const [searchQuery, setSearchQuery] = useState("");
+  const parentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadHistory();
@@ -51,15 +55,20 @@ export function HistoryPanel() {
   };
 
   const handleRestore = (entry: typeof entries[0]) => {
-    // Open a new tab and populate with history entry data
     const { setMethod, setUrl } = useTabStore.getState();
     useTabStore.getState().newTab();
-    // Small delay to let the tab render
     setTimeout(() => {
       setMethod(entry.method as HttpMethod);
       setUrl(entry.url);
     }, 0);
   };
+
+  const virtualizer = useVirtualizer({
+    count: entries.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10,
+  });
 
   return (
     <div className="px-2">
@@ -94,29 +103,51 @@ export function HistoryPanel() {
           {searchQuery ? "No results" : "No history yet"}
         </p>
       ) : (
-        <div className="max-h-[300px] overflow-y-auto">
-          {entries.map((entry) => (
-            <button
-              key={entry.id}
-              onClick={() => handleRestore(entry)}
-              className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left hover:bg-[var(--color-elevated)]"
-            >
-              <span
-                className={`w-9 shrink-0 text-[10px] font-bold ${METHOD_COLORS[entry.method] ?? "text-[var(--color-text-muted)]"}`}
-              >
-                {entry.method}
-              </span>
-              <span className="min-w-0 flex-1 truncate text-xs text-[var(--color-text-secondary)]">
-                {entry.url}
-              </span>
-              <span className={`shrink-0 text-[10px] ${statusColor(entry.status ?? undefined)}`}>
-                {entry.status ?? "—"}
-              </span>
-              <span className="shrink-0 text-[10px] text-[var(--color-text-dimmed)]">
-                {timeAgo(entry.timestamp)}
-              </span>
-            </button>
-          ))}
+        <div
+          ref={parentRef}
+          className="max-h-[300px] overflow-y-auto"
+        >
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const entry = entries[virtualRow.index];
+              return (
+                <button
+                  key={entry.id}
+                  onClick={() => handleRestore(entry)}
+                  className="flex w-full items-center gap-1.5 rounded px-2 text-left hover:bg-[var(--color-elevated)]"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  <span
+                    className={`w-9 shrink-0 text-[10px] font-bold ${METHOD_COLORS[entry.method] ?? "text-[var(--color-text-muted)]"}`}
+                  >
+                    {entry.method}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-xs text-[var(--color-text-secondary)]">
+                    {entry.url}
+                  </span>
+                  <span className={`shrink-0 text-[10px] ${statusColor(entry.status ?? undefined)}`}>
+                    {entry.status ?? "—"}
+                  </span>
+                  <span className="shrink-0 text-[10px] text-[var(--color-text-dimmed)]">
+                    {timeAgo(entry.timestamp)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

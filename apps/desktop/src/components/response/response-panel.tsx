@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useActiveTab } from "@/stores/tab-store";
+import { useActiveTab, useTabStore } from "@/stores/tab-store";
 import { AlertCircle, ClipboardCopy, Download, Check, ArrowLeftRight, BookmarkPlus } from "lucide-react";
 import { useDiffStore } from "@/stores/diff-store";
 import { CodeGenerationPanel } from "./code-generation-panel";
 import { TestResultsPanel } from "./test-results-panel";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { readFullResponse } from "@/lib/tauri-api";
 import type { ConsoleEntry } from "@apiark/types";
 
 type ResponseTab = "body" | "headers" | "cookies" | "tests" | "console" | "code";
@@ -170,6 +171,7 @@ export function ResponsePanel() {
         {activeTab === "body" && (
           <div>
             <ResponseBodyActions body={response.body} />
+            {response.truncated && <TruncationBanner response={response} />}
             <pre className="whitespace-pre-wrap break-all font-mono text-sm text-[var(--color-text-primary)]">
               {tryFormatJson(response.body)}
             </pre>
@@ -398,6 +400,42 @@ function ConsolePanel({ entries }: { entries: ConsoleEntry[] }) {
           {entry.message}
         </div>
       ))}
+    </div>
+  );
+}
+
+function TruncationBanner({ response }: { response: { truncated?: boolean; fullSize?: number; tempPath?: string } }) {
+  const [loading, setLoading] = useState(false);
+  const tab = useActiveTab();
+
+  const handleLoadFull = async () => {
+    if (!response.tempPath || !tab) return;
+    setLoading(true);
+    try {
+      const fullBody = await readFullResponse(response.tempPath);
+      // Update the tab's response body in-place
+      useTabStore.getState().updateResponse(tab.id, { body: fullBody, truncated: false });
+    } catch (err) {
+      console.error("Failed to load full response:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="mb-2 flex items-center gap-2 rounded bg-yellow-500/10 px-3 py-2 text-xs text-yellow-400">
+      <span>
+        Response truncated (showing 1 MB of {formatSize(response.fullSize ?? 0)}).
+      </span>
+      {response.tempPath && (
+        <button
+          onClick={handleLoadFull}
+          disabled={loading}
+          className="rounded bg-yellow-500/20 px-2 py-0.5 font-medium hover:bg-yellow-500/30 disabled:opacity-50"
+        >
+          {loading ? "Loading..." : "Load Full Response"}
+        </button>
+      )}
     </div>
   );
 }

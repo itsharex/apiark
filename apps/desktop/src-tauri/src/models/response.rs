@@ -14,6 +14,15 @@ pub struct ResponseData {
     pub time_ms: u64,
     /// Response size in bytes
     pub size_bytes: u64,
+    /// True if the body was truncated (original > 1MB)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub truncated: Option<bool>,
+    /// Full response size when truncated
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub full_size: Option<u64>,
+    /// Temp file path containing full response body when truncated
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub temp_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

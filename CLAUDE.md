@@ -328,9 +328,9 @@ No tool currently delivers ALL of these simultaneously:
 - [x] Categorized network errors with suggestions
 
 **Scalability (§25):**
-- [ ] Virtual scrolling for collection tree and history (TanStack Virtual)
-- [ ] Lazy loading — parse request YAML only when tab opens
-- [ ] Response body >10MB streamed to temp file with "Load full response" button
+- [x] Virtual scrolling for collection tree and history (TanStack Virtual)
+- [x] Lazy loading — parse request YAML only when tab opens
+- [x] Response body >1MB truncated with temp file and "Load full response" button
 - [ ] Background YAML parsing on Rust thread (skeleton UI during load)
 - [ ] In-memory fuzzy search index for collections
 

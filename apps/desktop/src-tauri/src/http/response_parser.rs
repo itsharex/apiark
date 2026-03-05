@@ -5,6 +5,9 @@ use crate::models::response::{CookieData, ResponseData};
 /// Maximum response body size we'll load into memory: 10MB.
 const MAX_BODY_SIZE: u64 = 10 * 1024 * 1024;
 
+/// Truncation threshold: bodies above this are truncated in the UI.
+const TRUNCATE_THRESHOLD: usize = 1024 * 1024; // 1MB
+
 /// Parse a reqwest::Response into our ResponseData struct.
 pub async fn parse_response(
     response: reqwest::Response,
@@ -60,6 +63,45 @@ pub async fn parse_response(
     }
 
     let size_bytes = bytes.len() as u64;
+
+    // Check if we need to truncate
+    if bytes.len() > TRUNCATE_THRESHOLD {
+        // Save full body to temp file
+        let temp_path = std::env::temp_dir().join(format!(
+            "apiark-response-{}",
+            uuid::Uuid::new_v4()
+        ));
+
+        if let Err(e) = std::fs::write(&temp_path, &bytes) {
+            tracing::warn!("Failed to write response temp file: {e}");
+            // Fall through to return truncated body without temp path
+        }
+
+        let truncated_bytes = &bytes[..TRUNCATE_THRESHOLD];
+        let body = String::from_utf8(truncated_bytes.to_vec()).unwrap_or_else(|_| {
+            format!("<binary data: {} bytes>", size_bytes)
+        });
+
+        let temp_path_str = if temp_path.exists() {
+            Some(temp_path.to_string_lossy().to_string())
+        } else {
+            None
+        };
+
+        return Ok(ResponseData {
+            status,
+            status_text,
+            headers,
+            cookies,
+            body,
+            time_ms: elapsed_ms,
+            size_bytes,
+            truncated: Some(true),
+            full_size: Some(size_bytes),
+            temp_path: temp_path_str,
+        });
+    }
+
     let body = String::from_utf8(bytes.to_vec()).unwrap_or_else(|_| {
         // For binary responses, show a placeholder
         format!("<binary data: {} bytes>", size_bytes)
@@ -73,5 +115,8 @@ pub async fn parse_response(
         body,
         time_ms: elapsed_ms,
         size_bytes,
+        truncated: None,
+        full_size: None,
+        temp_path: None,
     })
 }

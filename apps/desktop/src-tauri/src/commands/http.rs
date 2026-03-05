@@ -33,6 +33,14 @@ pub struct ScriptedResponseData {
     pub time_ms: u64,
     pub size_bytes: u64,
 
+    // Truncation fields
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub truncated: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub full_size: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub temp_path: Option<String>,
+
     // Scripting results
     pub test_results: Vec<TestResult>,
     pub assertion_results: Vec<AssertionResult>,
@@ -232,11 +240,19 @@ pub async fn send_request_with_scripts(
         body: response.body,
         time_ms: response.time_ms,
         size_bytes: response.size_bytes,
+        truncated: response.truncated,
+        full_size: response.full_size,
+        temp_path: response.temp_path,
         test_results: all_tests,
         assertion_results,
         console_output: all_console,
         env_mutations,
     })
+}
+
+#[tauri::command]
+pub async fn read_full_response(path: String) -> Result<String, String> {
+    std::fs::read_to_string(&path).map_err(|e| format!("Failed to read response file: {e}"))
 }
 
 // ── Helpers ──
