@@ -3,6 +3,8 @@ import { useTabStore, useActiveTab } from "@/stores/tab-store";
 import { KeyValueEditor } from "./key-value-editor";
 import type { AuthConfig, BodyType, OAuth2GrantType, OAuthTokenStatus } from "@apiark/types";
 import { oauthStartFlow, oauthGetTokenStatus, oauthClearToken } from "@/lib/tauri-api";
+import { HintTooltip } from "@/components/ui/hint-tooltip";
+import { CodeEditor } from "@/components/ui/code-editor";
 
 /** Extract :paramName path variables from a URL */
 function extractPathVariables(url: string): string[] {
@@ -91,7 +93,7 @@ export function RequestPanel() {
       {/* Tab content */}
       <div className="flex-1 overflow-auto p-3">
         {activeTab === "params" && (
-          <div className="space-y-4">
+          <div className="relative space-y-4">
             {pathVars.length > 0 && (
               <PathVariablesEditor
                 url={url}
@@ -105,6 +107,7 @@ export function RequestPanel() {
               keyPlaceholder="Parameter"
               valuePlaceholder="Value"
             />
+            <HintTooltip hintId="env-vars" message="Tip: Use {{variableName}} for dynamic values from environments" />
           </div>
         )}
 
@@ -214,12 +217,12 @@ function ScriptsEditor({
         <p className="mb-2 text-xs text-[var(--color-text-dimmed)]">
           Runs before the request is sent. Use <code className="rounded bg-[var(--color-elevated)] px-1">ark.env.set()</code>, <code className="rounded bg-[var(--color-elevated)] px-1">ark.request.setHeader()</code>, etc.
         </p>
-        <textarea
+        <CodeEditor
           value={preRequestScript ?? ""}
-          onChange={(e) => onPreRequestChange(e.target.value || null)}
+          onChange={(v) => onPreRequestChange(v || null)}
+          language="javascript"
+          height="150px"
           placeholder="// ark.env.set('token', 'abc123');"
-          className="h-32 w-full resize-y rounded bg-[var(--color-elevated)] p-3 font-mono text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500"
-          spellCheck={false}
         />
       </div>
 
@@ -230,12 +233,12 @@ function ScriptsEditor({
         <p className="mb-2 text-xs text-[var(--color-text-dimmed)]">
           Runs after the response is received. Access response via <code className="rounded bg-[var(--color-elevated)] px-1">ark.response.json()</code>, <code className="rounded bg-[var(--color-elevated)] px-1">ark.response.status</code>, etc.
         </p>
-        <textarea
+        <CodeEditor
           value={postResponseScript ?? ""}
-          onChange={(e) => onPostResponseChange(e.target.value || null)}
-          placeholder="// const body = ark.response.json();&#10;// ark.env.set('userId', body.id);"
-          className="h-32 w-full resize-y rounded bg-[var(--color-elevated)] p-3 font-mono text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500"
-          spellCheck={false}
+          onChange={(v) => onPostResponseChange(v || null)}
+          language="javascript"
+          height="150px"
+          placeholder="// const body = ark.response.json();"
         />
       </div>
     </div>
@@ -262,12 +265,12 @@ function TestsEditor({
         <p className="mb-2 text-xs text-[var(--color-text-dimmed)]">
           Declarative checks. E.g. <code className="rounded bg-[var(--color-elevated)] px-1">status: 200</code>, <code className="rounded bg-[var(--color-elevated)] px-1">{"body.id: { type: string }"}</code>
         </p>
-        <textarea
+        <CodeEditor
           value={assertions ?? ""}
-          onChange={(e) => onAssertionsChange(e.target.value || null)}
-          placeholder={"status: 200\nresponseTime:\n  lt: 2000\nbody.id:\n  type: number"}
-          className="h-28 w-full resize-y rounded bg-[var(--color-elevated)] p-3 font-mono text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500"
-          spellCheck={false}
+          onChange={(v) => onAssertionsChange(v || null)}
+          language="yaml"
+          height="130px"
+          placeholder="status: 200"
         />
       </div>
 
@@ -278,12 +281,12 @@ function TestsEditor({
         <p className="mb-2 text-xs text-[var(--color-text-dimmed)]">
           Write tests using <code className="rounded bg-[var(--color-elevated)] px-1">ark.test()</code> and <code className="rounded bg-[var(--color-elevated)] px-1">ark.expect()</code>.
         </p>
-        <textarea
+        <CodeEditor
           value={testScript ?? ""}
-          onChange={(e) => onTestScriptChange(e.target.value || null)}
-          placeholder={'ark.test("status is 200", function() {\n  ark.expect(ark.response.status).to.equal(200);\n});'}
-          className="h-32 w-full resize-y rounded bg-[var(--color-elevated)] p-3 font-mono text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500"
-          spellCheck={false}
+          onChange={(v) => onTestScriptChange(v || null)}
+          language="javascript"
+          height="150px"
+          placeholder='ark.test("status is 200", function() { ... });'
         />
       </div>
     </div>
@@ -318,12 +321,12 @@ function BodyEditor({
 
       {/* Body content */}
       {body.type !== "none" && body.type !== "form-data" && body.type !== "urlencoded" && (
-        <textarea
+        <CodeEditor
           value={body.content}
-          onChange={(e) => onChange({ ...body, content: e.target.value })}
+          onChange={(v) => onChange({ ...body, content: v })}
+          language={body.type === "json" ? "json" : body.type === "xml" ? "xml" : "plaintext"}
+          height="220px"
           placeholder={body.type === "json" ? '{\n  "key": "value"\n}' : ""}
-          className="h-48 w-full resize-y rounded bg-[var(--color-elevated)] p-3 font-mono text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500"
-          spellCheck={false}
         />
       )}
 
@@ -408,6 +411,15 @@ function AuthEditor({
                 headerPrefix: "Bearer",
               });
               break;
+            case "ntlm":
+              onChange({
+                type: "ntlm",
+                username: "",
+                password: "",
+                domain: "",
+                workstation: "",
+              });
+              break;
           }
         }}
         className={SELECT_CLASS}
@@ -420,6 +432,7 @@ function AuthEditor({
         <option value="digest">Digest Auth</option>
         <option value="aws-v4">AWS Signature v4</option>
         <option value="jwt-bearer">JWT Bearer</option>
+        <option value="ntlm">NTLM</option>
       </select>
 
       {/* Auth fields */}
@@ -579,6 +592,39 @@ function AuthEditor({
             value={auth.headerPrefix}
             onChange={(e) => onChange({ ...auth, headerPrefix: e.target.value })}
             placeholder="Header Prefix (default: Bearer)"
+            className={INPUT_CLASS}
+          />
+        </div>
+      )}
+
+      {auth.type === "ntlm" && (
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={auth.username}
+            onChange={(e) => onChange({ ...auth, username: e.target.value })}
+            placeholder="Username"
+            className={INPUT_CLASS}
+          />
+          <input
+            type="password"
+            value={auth.password}
+            onChange={(e) => onChange({ ...auth, password: e.target.value })}
+            placeholder="Password"
+            className={INPUT_CLASS}
+          />
+          <input
+            type="text"
+            value={auth.domain}
+            onChange={(e) => onChange({ ...auth, domain: e.target.value })}
+            placeholder="Domain (optional)"
+            className={INPUT_CLASS}
+          />
+          <input
+            type="text"
+            value={auth.workstation}
+            onChange={(e) => onChange({ ...auth, workstation: e.target.value })}
+            placeholder="Workstation (optional)"
             className={INPUT_CLASS}
           />
         </div>

@@ -27,7 +27,7 @@ import { DocsPreviewDialog } from "@/components/docs/docs-preview-dialog";
 import { useDocsStore } from "@/stores/docs-store";
 import { WelcomeScreen } from "@/components/onboarding/welcome-screen";
 import { GuidedTour } from "@/components/onboarding/guided-tour";
-import { AlertCircle, X, RefreshCw, FileX } from "lucide-react";
+import { AlertCircle, X, RefreshCw, FileX, GitMerge, Shield } from "lucide-react";
 
 function App() {
   const { newTab, closeTab, save, send, persistTabs, restoreTabs, undoTab, redoTab } = useTabStore();
@@ -177,6 +177,9 @@ function App() {
 
   return (
     <div className="flex h-screen flex-col bg-[var(--color-bg)] text-[var(--color-text-primary)]">
+      {/* Crash report opt-in banner */}
+      <CrashReportBanner />
+
       {/* Auto-save error banner */}
       {autoSaveError && (
         <div className="flex items-center gap-2 bg-red-500/10 px-4 py-2 text-sm text-red-400">
@@ -310,8 +313,57 @@ function EmptyState() {
   );
 }
 
-function ConflictBanner({ tabId, conflictState }: { tabId: string; conflictState: "external-change" | "deleted" }) {
+function CrashReportBanner() {
+  const { settings, updateSettings } = useSettingsStore();
+  if (settings.crashReportsEnabled !== null) return null;
+
+  return (
+    <div className="flex items-center gap-2 bg-blue-500/10 px-4 py-2 text-sm text-blue-400">
+      <Shield className="h-4 w-4 shrink-0" />
+      <span className="flex-1">
+        Help improve ApiArk by sending anonymous crash reports? No request data is ever included.
+      </span>
+      <button
+        onClick={() => updateSettings({ crashReportsEnabled: true })}
+        className="rounded bg-blue-500/20 px-2 py-0.5 text-xs hover:bg-blue-500/30"
+      >
+        Enable
+      </button>
+      <button
+        onClick={() => updateSettings({ crashReportsEnabled: false })}
+        className="rounded bg-blue-500/20 px-2 py-0.5 text-xs hover:bg-blue-500/30"
+      >
+        No thanks
+      </button>
+    </div>
+  );
+}
+
+function ConflictBanner({ tabId, conflictState }: { tabId: string; conflictState: "external-change" | "deleted" | "merge-conflict" }) {
   const { reloadFromDisk, dismissConflict, closeTab } = useTabStore();
+
+  if (conflictState === "merge-conflict") {
+    return (
+      <div className="flex items-center gap-2 bg-orange-500/10 px-4 py-2 text-sm text-orange-400">
+        <GitMerge className="h-4 w-4 shrink-0" />
+        <span className="flex-1">
+          This file has Git merge conflicts. Please resolve them in your editor or Git tool, then reload.
+        </span>
+        <button
+          onClick={() => reloadFromDisk(tabId)}
+          className="rounded bg-orange-500/20 px-2 py-0.5 text-xs hover:bg-orange-500/30"
+        >
+          Reload
+        </button>
+        <button
+          onClick={() => closeTab(tabId)}
+          className="rounded bg-orange-500/20 px-2 py-0.5 text-xs hover:bg-orange-500/30"
+        >
+          Close
+        </button>
+      </div>
+    );
+  }
 
   if (conflictState === "deleted") {
     return (

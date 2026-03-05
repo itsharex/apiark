@@ -73,6 +73,37 @@ pub fn run() {
         .with_ansi(false)
         .init();
 
+    // Install panic hook for crash reports
+    let crash_dir = apiark_dir.join("crash-reports");
+    let _ = std::fs::create_dir_all(&crash_dir);
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S").to_string();
+        let location = info
+            .location()
+            .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+            .unwrap_or_else(|| "unknown".to_string());
+        let payload = if let Some(s) = info.payload().downcast_ref::<&str>() {
+            s.to_string()
+        } else if let Some(s) = info.payload().downcast_ref::<String>() {
+            s.clone()
+        } else {
+            "Unknown panic".to_string()
+        };
+        let report = serde_json::json!({
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "appVersion": env!("CARGO_PKG_VERSION"),
+            "os": std::env::consts::OS,
+            "arch": std::env::consts::ARCH,
+            "location": location,
+            "message": payload,
+        });
+        let path = crash_dir.join(format!("crash_{timestamp}.json"));
+        let _ = std::fs::write(&path, serde_json::to_string_pretty(&report).unwrap_or_default());
+        tracing::error!("PANIC at {location}: {payload}");
+        default_hook(info);
+    }));
+
     let db_path = apiark_dir.join("data.db");
 
     let history_db = match HistoryDb::open(&db_path) {

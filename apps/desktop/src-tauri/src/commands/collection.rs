@@ -6,23 +6,35 @@ use crate::storage::collection;
 
 #[tauri::command]
 pub async fn open_collection(path: String) -> Result<CollectionNode, String> {
-    let collection_path = Path::new(&path);
     tracing::info!(path = %path, "Opening collection");
-    collection::load_collection_tree(collection_path)
+    tokio::task::spawn_blocking(move || {
+        let collection_path = Path::new(&path);
+        collection::load_collection_tree(collection_path)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
 }
 
 #[tauri::command]
 pub async fn read_request_file(path: String) -> Result<RequestFile, String> {
-    let file_path = Path::new(&path);
     tracing::debug!(path = %path, "Reading request file");
-    collection::read_request(file_path)
+    tokio::task::spawn_blocking(move || {
+        let file_path = Path::new(&path);
+        collection::read_request(file_path)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
 }
 
 #[tauri::command]
 pub async fn save_request_file(path: String, request: RequestFile) -> Result<(), String> {
-    let file_path = Path::new(&path);
     tracing::debug!(path = %path, "Saving request file");
-    collection::write_request(file_path, &request)
+    tokio::task::spawn_blocking(move || {
+        let file_path = Path::new(&path);
+        collection::write_request(file_path, &request)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
 }
 
 #[tauri::command]
@@ -47,6 +59,7 @@ pub async fn create_request(
         tests: None,
         pre_request_script: None,
         post_response_script: None,
+        cookies: None,
     };
     let path = collection::create_request_file(dir_path, &filename, &request)?;
     Ok(path.to_string_lossy().to_string())

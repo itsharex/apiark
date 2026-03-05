@@ -4,6 +4,7 @@ import { useEnvironmentStore } from "@/stores/environment-store";
 import type { HttpMethod } from "@apiark/types";
 import { Loader2, Send, Eye } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
+import { HintTooltip } from "@/components/ui/hint-tooltip";
 
 const METHODS: HttpMethod[] = [
   "GET",
@@ -141,19 +142,22 @@ export const UrlBar = forwardRef<HTMLInputElement>(function UrlBar(_props, ref) 
       )}
 
       {/* Send button */}
-      <button
-        data-tour="send-btn"
-        onClick={send}
-        disabled={tab.loading || !tab.url.trim()}
-        className="flex items-center gap-1.5 rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {tab.loading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Send className="h-4 w-4" />
-        )}
-        Send
-      </button>
+      <div className="relative">
+        <button
+          data-tour="send-btn"
+          onClick={send}
+          disabled={tab.loading || !tab.url.trim()}
+          className="flex items-center gap-1.5 rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {tab.loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+          Send
+        </button>
+        <HintTooltip hintId="send-shortcut" message="Tip: Press Ctrl+Enter to send requests quickly" />
+      </div>
     </div>
   );
 });

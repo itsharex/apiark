@@ -250,5 +250,12 @@ fn export_auth(auth: &AuthConfig) -> Option<Value> {
             // JWT Bearer has no direct Postman equivalent
             None
         }
+        AuthConfig::Ntlm { username, password, .. } => Some(json!({
+            "type": "ntlm",
+            "ntlm": [
+                {"key": "username", "value": username, "type": "string"},
+                {"key": "password", "value": password, "type": "string"}
+            ]
+        })),
     }
 }

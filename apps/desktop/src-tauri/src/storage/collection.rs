@@ -130,10 +130,21 @@ fn read_request_meta(path: &Path) -> Result<RequestMeta, String> {
         .map_err(|e| format!("Invalid request YAML {}: {e}", path.display()))
 }
 
+/// Check if a file contains Git merge conflict markers.
+fn has_merge_conflicts(content: &str) -> bool {
+    content.contains("<<<<<<<") && content.contains(">>>>>>>")
+}
+
 /// Read the full request file.
 pub fn read_request(path: &Path) -> Result<RequestFile, String> {
     let content =
         fs::read_to_string(path).map_err(|e| format!("Failed to read {}: {e}", path.display()))?;
+    if has_merge_conflicts(&content) {
+        return Err(format!(
+            "MERGE_CONFLICT:{}",
+            path.display()
+        ));
+    }
     serde_yaml::from_str::<RequestFile>(&content)
         .map_err(|e| format!("Invalid request YAML {}: {e}", path.display()))
 }

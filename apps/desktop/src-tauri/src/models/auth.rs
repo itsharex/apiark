@@ -57,6 +57,14 @@ pub enum AuthConfig {
         #[serde(default, rename = "sessionToken")]
         session_token: String,
     },
+    Ntlm {
+        username: String,
+        password: String,
+        #[serde(default)]
+        domain: String,
+        #[serde(default)]
+        workstation: String,
+    },
     #[serde(rename = "jwt-bearer")]
     JwtBearer {
         /// HMAC secret or RSA/EC private key (PEM)

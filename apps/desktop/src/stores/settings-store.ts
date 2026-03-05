@@ -19,6 +19,7 @@ const defaultSettings: AppSettings = {
   timeoutMs: 30000,
   sidebarWidth: 256,
   onboardingComplete: false,
+  crashReportsEnabled: null,
 };
 
 export const useSettingsStore = create<SettingsState>((set) => ({

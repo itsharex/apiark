@@ -21,6 +21,8 @@ const FORMAT_LABELS: Record<ImportFormat, string> = {
   insomnia: "Insomnia v4",
   bruno: "Bruno",
   openapi: "OpenAPI 3.x",
+  hoppscotch: "Hoppscotch",
+  har: "HAR (HTTP Archive)",
 };
 
 export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {

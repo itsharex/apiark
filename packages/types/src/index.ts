@@ -75,6 +75,13 @@ export type AuthConfig =
       sessionToken: string;
     }
   | {
+      type: "ntlm";
+      username: string;
+      password: string;
+      domain: string;
+      workstation: string;
+    }
+  | {
       type: "jwt-bearer";
       secret: string;
       algorithm: string;
@@ -110,6 +117,7 @@ export interface SendRequestParams {
   timeoutMs?: number;
   followRedirects: boolean;
   verifySsl: boolean;
+  cookies?: Record<string, string>;
 }
 
 // ── Response (matches Rust ResponseData) ──
@@ -210,6 +218,7 @@ export interface RequestFile {
   postResponseScript?: string;
   tests?: string;
   assert?: unknown;
+  cookies?: Record<string, string>;
 }
 
 // ── Environment ──
@@ -261,6 +270,7 @@ export interface AppSettings {
   timeoutMs: number;
   sidebarWidth: number;
   onboardingComplete: boolean;
+  crashReportsEnabled: boolean | null;
 }
 
 // ── Tab Protocol ──
@@ -380,8 +390,8 @@ export interface ImportWarning {
   message: string;
 }
 
-export type ImportFormat = "postman" | "insomnia" | "bruno" | "openapi";
-export type ExportFormat = "postman" | "openapi";
+export type ImportFormat = "postman" | "insomnia" | "bruno" | "openapi" | "hoppscotch" | "har";
+export type ExportFormat = "postman" | "openapi" | "apiark";
 
 // ── gRPC ──
 
@@ -569,7 +579,7 @@ export interface Tab {
   consoleOutput: ConsoleEntry[];
 
   // File watcher conflict state
-  conflictState: "external-change" | "deleted" | null;
+  conflictState: "external-change" | "deleted" | "merge-conflict" | null;
 
   // Undo/redo stacks (internal, not persisted)
   undoStack: TabSnapshot[];

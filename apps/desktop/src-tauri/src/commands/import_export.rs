@@ -58,6 +58,25 @@ pub fn detect_import_format(file_path: &str) -> Result<String, String> {
         return Ok("insomnia".to_string());
     }
 
+    // Check for Hoppscotch (has "v" field + "folders"/"requests" arrays, no "item" like Postman)
+    if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
+        if val.get("v").is_some()
+            && (val.get("folders").is_some() || val.get("requests").is_some())
+            && val.get("item").is_none()
+        {
+            return Ok("hoppscotch".to_string());
+        }
+    }
+
+    // Check for HAR (HTTP Archive)
+    if content.contains("\"log\"") && content.contains("\"entries\"") {
+        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
+            if val.get("log").and_then(|l| l.get("entries")).is_some() {
+                return Ok("har".to_string());
+            }
+        }
+    }
+
     // Check for OpenAPI
     if content.contains("\"openapi\"") || content.contains("openapi:") {
         return Ok("openapi".to_string());
@@ -67,7 +86,7 @@ pub fn detect_import_format(file_path: &str) -> Result<String, String> {
         return Err("Swagger 2.0 detected. Only OpenAPI 3.x is supported.".to_string());
     }
 
-    Err("Could not detect import format. Supported: Postman v2.1, Insomnia v4, OpenAPI 3.x, Bruno."
+    Err("Could not detect import format. Supported: Postman v2.1, Insomnia v4, OpenAPI 3.x, Bruno, Hoppscotch, HAR."
         .to_string())
 }
 
@@ -106,6 +125,7 @@ pub fn export_collection(collection_path: &str, format: &str) -> Result<String, 
     match format {
         "postman" => crate::exporter::postman::export_to_postman(path),
         "openapi" => crate::exporter::openapi::export_to_openapi(path),
+        "apiark" => crate::exporter::apiark::export_to_apiark_zip(path),
         _ => Err(format!("Unsupported export format: {format}")),
     }
 }
@@ -127,6 +147,16 @@ fn parse_import(file_path: &str, format: &str) -> Result<importer::ImportData, S
             let content = std::fs::read_to_string(file_path)
                 .map_err(|e| format!("Failed to read file: {e}"))?;
             importer::openapi::parse_openapi(&content)
+        }
+        "hoppscotch" => {
+            let content = std::fs::read_to_string(file_path)
+                .map_err(|e| format!("Failed to read file: {e}"))?;
+            importer::hoppscotch::parse_hoppscotch(&content)
+        }
+        "har" => {
+            let content = std::fs::read_to_string(file_path)
+                .map_err(|e| format!("Failed to read file: {e}"))?;
+            importer::har::parse_har(&content)
         }
         _ => Err(format!("Unsupported import format: {format}")),
     }

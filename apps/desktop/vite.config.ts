@@ -12,6 +12,19 @@ export default defineConfig(async () => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Optimize Monaco Editor chunking for Tauri (bundled, not CDN)
+  optimizeDeps: {
+    include: ["monaco-editor"],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "monaco-editor": ["monaco-editor"],
+        },
+      },
+    },
+  },
   clearScreen: false,
   server: {
     port: 1420,

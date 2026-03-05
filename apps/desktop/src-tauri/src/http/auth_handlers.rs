@@ -194,3 +194,198 @@ fn hmac_sha256(key: &[u8], data: &[u8]) -> Vec<u8> {
     mac.update(data);
     mac.finalize().into_bytes().to_vec()
 }
+
+// ── NTLM Authentication ──
+
+/// Generate NTLM Type 1 (Negotiate) message.
+/// Returns a base64-encoded NTLM negotiate message for the Authorization header.
+pub fn generate_ntlm_negotiate(domain: &str, workstation: &str) -> String {
+    let domain_bytes = domain.as_bytes();
+    let workstation_bytes = workstation.as_bytes();
+
+    let domain_len = domain_bytes.len() as u16;
+    let workstation_len = workstation_bytes.len() as u16;
+
+    // Offsets
+    let domain_offset: u32 = 32;
+    let workstation_offset: u32 = domain_offset + domain_len as u32;
+
+    let mut msg = Vec::new();
+    // Signature: "NTLMSSP\0"
+    msg.extend_from_slice(b"NTLMSSP\0");
+    // Type: 1 (Negotiate)
+    msg.extend_from_slice(&1u32.to_le_bytes());
+    // Flags: Negotiate Unicode | OEM | Request Target | NTLM | Always Sign
+    let flags: u32 = 0x00000001 | 0x00000002 | 0x00000004 | 0x00000200 | 0x00008000;
+    msg.extend_from_slice(&flags.to_le_bytes());
+    // Domain security buffer: len, max_len, offset
+    msg.extend_from_slice(&domain_len.to_le_bytes());
+    msg.extend_from_slice(&domain_len.to_le_bytes());
+    msg.extend_from_slice(&domain_offset.to_le_bytes());
+    // Workstation security buffer
+    msg.extend_from_slice(&workstation_len.to_le_bytes());
+    msg.extend_from_slice(&workstation_len.to_le_bytes());
+    msg.extend_from_slice(&workstation_offset.to_le_bytes());
+    // Domain and workstation data
+    msg.extend_from_slice(domain_bytes);
+    msg.extend_from_slice(workstation_bytes);
+
+    use base64::Engine;
+    base64::engine::general_purpose::STANDARD.encode(&msg)
+}
+
+/// Parse NTLM Type 2 (Challenge) message and generate Type 3 (Authenticate).
+/// `challenge_b64` is the base64-encoded Type 2 message from the server's WWW-Authenticate header.
+/// Returns a base64-encoded Type 3 message.
+pub fn generate_ntlm_authenticate(
+    challenge_b64: &str,
+    username: &str,
+    password: &str,
+    domain: &str,
+    workstation: &str,
+) -> Result<String, String> {
+    use base64::Engine;
+    use md4::{Md4, Digest as Md4Digest};
+
+    let challenge = base64::engine::general_purpose::STANDARD
+        .decode(challenge_b64.trim())
+        .map_err(|e| format!("Invalid NTLM challenge base64: {e}"))?;
+
+    if challenge.len() < 32 {
+        return Err("NTLM challenge message too short".to_string());
+    }
+
+    // Verify signature
+    if &challenge[0..8] != b"NTLMSSP\0" {
+        return Err("Invalid NTLM signature".to_string());
+    }
+
+    // Extract server challenge (8 bytes at offset 24)
+    let server_challenge = &challenge[24..32];
+
+    // Compute NTLMv1 response (24 bytes)
+    // NT Hash = MD4(UTF-16LE(password))
+    let password_utf16: Vec<u8> = password.encode_utf16().flat_map(|c| c.to_le_bytes()).collect();
+    let mut md4 = Md4::new();
+    md4.update(&password_utf16);
+    let nt_hash = md4.finalize();
+
+    // Pad NT hash to 21 bytes
+    let mut nt_hash_padded = [0u8; 21];
+    nt_hash_padded[..16].copy_from_slice(&nt_hash);
+
+    // DES-encrypt server_challenge with each 7-byte chunk (simplified — use response_from_hash)
+    let nt_response = des_encrypt_challenge(&nt_hash_padded, server_challenge);
+
+    // LM Response (for simplicity, set to same as NT response or zeros)
+    let lm_response = vec![0u8; 24];
+
+    // Encode strings as OEM (ASCII) for simplicity
+    let domain_bytes = domain.as_bytes();
+    let username_bytes = username.as_bytes();
+    let workstation_bytes = workstation.as_bytes();
+
+    // Build Type 3 message
+    let lm_len = lm_response.len() as u16;
+    let nt_len = nt_response.len() as u16;
+    let domain_len = domain_bytes.len() as u16;
+    let user_len = username_bytes.len() as u16;
+    let ws_len = workstation_bytes.len() as u16;
+
+    let data_offset: u32 = 64; // Fixed header size
+    let mut offset = data_offset;
+
+    let domain_offset = offset;
+    offset += domain_len as u32;
+    let user_offset = offset;
+    offset += user_len as u32;
+    let ws_offset = offset;
+    offset += ws_len as u32;
+    let lm_offset = offset;
+    offset += lm_len as u32;
+    let nt_offset = offset;
+
+    let mut msg = Vec::new();
+    msg.extend_from_slice(b"NTLMSSP\0");
+    msg.extend_from_slice(&3u32.to_le_bytes()); // Type 3
+    // LM security buffer
+    msg.extend_from_slice(&lm_len.to_le_bytes());
+    msg.extend_from_slice(&lm_len.to_le_bytes());
+    msg.extend_from_slice(&lm_offset.to_le_bytes());
+    // NT security buffer
+    msg.extend_from_slice(&nt_len.to_le_bytes());
+    msg.extend_from_slice(&nt_len.to_le_bytes());
+    msg.extend_from_slice(&nt_offset.to_le_bytes());
+    // Domain security buffer
+    msg.extend_from_slice(&domain_len.to_le_bytes());
+    msg.extend_from_slice(&domain_len.to_le_bytes());
+    msg.extend_from_slice(&domain_offset.to_le_bytes());
+    // User security buffer
+    msg.extend_from_slice(&user_len.to_le_bytes());
+    msg.extend_from_slice(&user_len.to_le_bytes());
+    msg.extend_from_slice(&user_offset.to_le_bytes());
+    // Workstation security buffer
+    msg.extend_from_slice(&ws_len.to_le_bytes());
+    msg.extend_from_slice(&ws_len.to_le_bytes());
+    msg.extend_from_slice(&ws_offset.to_le_bytes());
+    // Encrypted random session key (empty)
+    msg.extend_from_slice(&0u16.to_le_bytes());
+    msg.extend_from_slice(&0u16.to_le_bytes());
+    msg.extend_from_slice(&0u32.to_le_bytes());
+    // Flags
+    let flags: u32 = 0x00000001 | 0x00000002 | 0x00000200 | 0x00008000;
+    msg.extend_from_slice(&flags.to_le_bytes());
+
+    // Data
+    msg.extend_from_slice(domain_bytes);
+    msg.extend_from_slice(username_bytes);
+    msg.extend_from_slice(workstation_bytes);
+    msg.extend_from_slice(&lm_response);
+    msg.extend_from_slice(&nt_response);
+
+    Ok(base64::engine::general_purpose::STANDARD.encode(&msg))
+}
+
+/// Simplified DES encryption of an 8-byte challenge using a 21-byte key (3 x 7-byte DES keys).
+/// Returns a 24-byte response.
+fn des_encrypt_challenge(key21: &[u8; 21], challenge: &[u8]) -> Vec<u8> {
+    let mut result = Vec::with_capacity(24);
+
+    for i in 0..3 {
+        let key7 = &key21[i * 7..i * 7 + 7];
+        let des_key = expand_des_key(key7);
+        // Simple DES ECB encryption of the 8-byte challenge
+        let encrypted = des_ecb_encrypt(&des_key, challenge);
+        result.extend_from_slice(&encrypted);
+    }
+
+    result
+}
+
+/// Expand a 7-byte key to an 8-byte DES key (with parity bits).
+fn expand_des_key(key7: &[u8]) -> [u8; 8] {
+    [
+        key7[0] >> 1,
+        ((key7[0] & 0x01) << 6) | (key7[1] >> 2),
+        ((key7[1] & 0x03) << 5) | (key7[2] >> 3),
+        ((key7[2] & 0x07) << 4) | (key7[3] >> 4),
+        ((key7[3] & 0x0f) << 3) | (key7[4] >> 5),
+        ((key7[4] & 0x1f) << 2) | (key7[5] >> 6),
+        ((key7[5] & 0x3f) << 1) | (key7[6] >> 7),
+        (key7[6] & 0x7f) << 1,
+    ]
+}
+
+/// DES ECB encryption (single block, 8 bytes) using the `des` crate.
+fn des_ecb_encrypt(key: &[u8; 8], data: &[u8]) -> [u8; 8] {
+    use des::cipher::{BlockEncrypt, KeyInit};
+    use des::Des;
+
+    let cipher = Des::new_from_slice(key).expect("DES key is 8 bytes");
+    let mut block = [0u8; 8];
+    block.copy_from_slice(&data[..8]);
+    let block_ref: &mut des::cipher::generic_array::GenericArray<u8, _> =
+        des::cipher::generic_array::GenericArray::from_mut_slice(&mut block);
+    cipher.encrypt_block(block_ref);
+    block
+}

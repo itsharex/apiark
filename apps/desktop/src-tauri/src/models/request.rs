@@ -96,4 +96,7 @@ pub struct SendRequestParams {
     /// Whether to verify SSL certificates (default: true)
     #[serde(default = "default_true")]
     pub verify_ssl: bool,
+    /// Per-request cookie overrides
+    #[serde(default)]
+    pub cookies: Option<std::collections::HashMap<String, String>>,
 }

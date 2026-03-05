@@ -63,7 +63,46 @@ pub async fn send_request(
 
     tracing::info!(method = ?interpolated.method, url = %interpolated.url, "Sending request");
 
-    let result = HttpEngine::send(interpolated.clone()).await;
+    let mut result = HttpEngine::send(interpolated.clone()).await;
+
+    // NTLM challenge-response: if we get 401 with NTLM Type 2, resend with Type 3
+    if let (Ok(ref response), Some(AuthConfig::Ntlm { username, password, domain, workstation })) =
+        (&result, &interpolated.auth)
+    {
+        if response.status == 401 {
+            // Look for NTLM challenge in WWW-Authenticate header
+            if let Some(challenge) = response
+                .headers
+                .iter()
+                .find(|h| h.key.eq_ignore_ascii_case("www-authenticate") && h.value.starts_with("NTLM "))
+            {
+                let challenge_b64 = challenge.value.trim_start_matches("NTLM ").trim();
+                match crate::http::auth_handlers::generate_ntlm_authenticate(
+                    challenge_b64, username, password, domain, workstation,
+                ) {
+                    Ok(type3) => {
+                        // Rebuild request with Type 3 auth header
+                        let mut retry_params = interpolated.clone();
+                        retry_params.auth = Some(AuthConfig::Bearer {
+                            token: String::new(), // placeholder — we override the header
+                        });
+                        // We need to send raw header, so temporarily set auth to None
+                        // and add the header manually
+                        retry_params.auth = std::option::Option::None;
+                        retry_params.headers.push(KeyValuePair {
+                            key: "Authorization".to_string(),
+                            value: format!("NTLM {type3}"),
+                            enabled: true,
+                        });
+                        result = HttpEngine::send(retry_params.clone()).await;
+                    }
+                    Err(e) => {
+                        tracing::warn!("NTLM Type 3 generation failed: {e}");
+                    }
+                }
+            }
+        }
+    }
 
     record_history(&state, &interpolated, &params, &result, collection_path, request_name);
 
@@ -456,6 +495,12 @@ fn interpolate_auth(auth: &AuthConfig, vars: &HashMap<String, String>) -> AuthCo
             algorithm: algorithm.clone(),
             payload: interpolation::interpolate(payload, vars),
             header_prefix: header_prefix.clone(),
+        },
+        AuthConfig::Ntlm { username, password, domain, workstation } => AuthConfig::Ntlm {
+            username: interpolation::interpolate(username, vars),
+            password: interpolation::interpolate(password, vars),
+            domain: interpolation::interpolate(domain, vars),
+            workstation: interpolation::interpolate(workstation, vars),
         },
     }
 }

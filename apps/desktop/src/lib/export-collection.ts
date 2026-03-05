@@ -1,9 +1,10 @@
 import type { ExportFormat } from "@apiark/types";
 import { exportCollection } from "@/lib/tauri-api";
 
-const FORMAT_EXTENSIONS: Record<ExportFormat, string> = {
-  postman: "postman_collection.json",
-  openapi: "openapi.json",
+const FORMAT_INFO: Record<ExportFormat, { ext: string; filterName: string; filterExt: string[] }> = {
+  postman: { ext: "postman_collection.json", filterName: "JSON", filterExt: ["json"] },
+  openapi: { ext: "openapi.json", filterName: "JSON", filterExt: ["json"] },
+  apiark: { ext: "apiark.zip", filterName: "ZIP Archive", filterExt: ["zip"] },
 };
 
 /**
@@ -14,19 +15,25 @@ export async function exportCollectionToFile(
   collectionName: string,
   format: ExportFormat,
 ): Promise<void> {
-  const content = await exportCollection(collectionPath, format);
+  const result = await exportCollection(collectionPath, format);
+  const info = FORMAT_INFO[format];
 
   const { save } = await import("@tauri-apps/plugin-dialog");
-  const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-
-  const defaultName = `${collectionName.toLowerCase().replace(/\s+/g, "-")}.${FORMAT_EXTENSIONS[format]}`;
+  const defaultName = `${collectionName.toLowerCase().replace(/\s+/g, "-")}.${info.ext}`;
 
   const filePath = await save({
     defaultPath: defaultName,
-    filters: [{ name: "JSON", extensions: ["json"] }],
+    filters: [{ name: info.filterName, extensions: info.filterExt }],
   });
 
-  if (filePath) {
-    await writeTextFile(filePath, content);
+  if (!filePath) return;
+
+  if (format === "apiark") {
+    // result is the path to the generated zip file — copy it to the user's chosen location
+    const { copyFile } = await import("@tauri-apps/plugin-fs");
+    await copyFile(result, filePath);
+  } else {
+    const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+    await writeTextFile(filePath, result);
   }
 }

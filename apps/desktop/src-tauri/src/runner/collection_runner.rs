@@ -86,6 +86,7 @@ fn request_file_to_params(file: &RequestFile) -> SendRequestParams {
         timeout_ms: None,
         follow_redirects: true,
         verify_ssl: true,
+        cookies: file.cookies.clone(),
     }
 }
 
@@ -184,6 +185,12 @@ fn interpolate_auth(auth: &AuthConfig, vars: &HashMap<String, String>) -> AuthCo
             algorithm: algorithm.clone(),
             payload: interpolation::interpolate(payload, vars),
             header_prefix: header_prefix.clone(),
+        },
+        AuthConfig::Ntlm { username, password, domain, workstation } => AuthConfig::Ntlm {
+            username: interpolation::interpolate(username, vars),
+            password: interpolation::interpolate(password, vars),
+            domain: interpolation::interpolate(domain, vars),
+            workstation: interpolation::interpolate(workstation, vars),
         },
     }
 }

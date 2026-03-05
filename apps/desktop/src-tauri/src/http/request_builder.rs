@@ -97,6 +97,19 @@ pub fn build_request(
     // Apply body
     builder = apply_body(builder, &params.body)?;
 
+    // Apply cookie overrides
+    if let Some(cookies) = &params.cookies {
+        let cookie_str = cookies
+            .iter()
+            .filter(|(_, v)| !v.is_empty())
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect::<Vec<_>>()
+            .join("; ");
+        if !cookie_str.is_empty() {
+            builder = builder.header("Cookie", cookie_str);
+        }
+    }
+
     Ok(builder)
 }
 
@@ -190,6 +203,16 @@ fn apply_auth(mut builder: RequestBuilder, auth: &Option<AuthConfig>, params: &S
                     tracing::warn!("JWT generation failed: {e}");
                 }
             }
+        }
+        Some(AuthConfig::Ntlm {
+            domain,
+            workstation,
+            ..
+        }) => {
+            // First request sends Type 1 (Negotiate) message.
+            // If we get a 401 with a Type 2 challenge, the caller handles retry with Type 3.
+            let negotiate = auth_handlers::generate_ntlm_negotiate(domain, workstation);
+            builder = builder.header("Authorization", format!("NTLM {negotiate}"));
         }
         Some(AuthConfig::None) | None => {}
     }

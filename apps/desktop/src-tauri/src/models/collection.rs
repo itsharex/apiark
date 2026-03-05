@@ -59,6 +59,8 @@ pub struct RequestFile {
     pub pre_request_script: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub post_response_script: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cookies: Option<HashMap<String, String>>,
 }
 
 /// Body stored in YAML files

@@ -252,7 +252,7 @@ No tool currently delivers ALL of these simultaneously:
 - [x] OAuth 2.0 (Authorization Code, Client Credentials, Implicit, Password, PKCE)
 - [x] Digest Auth
 - [x] AWS Signature v4
-- [ ] NTLM
+- [x] NTLM
 - [x] JWT Bearer (built-in JWT generation)
 
 **Scripting Engine:**
@@ -260,7 +260,7 @@ No tool currently delivers ALL of these simultaneously:
 - [x] Post-response scripts (JavaScript/TypeScript)
 - [x] `ark` API object (request, response, env, globals, variables, test, expect, sendRequest, visualize, utils, info)
 - [x] Built-in libraries: Chai.js, CryptoJS, Lodash, Ajv, Faker, moment
-- [ ] Script editor with auto-complete and type hints
+- [x] Script editor with auto-complete and type hints
 
 **Testing & Assertions:**
 - [x] Declarative assertions in YAML
@@ -286,15 +286,15 @@ No tool currently delivers ALL of these simultaneously:
 
 **Import/Export:**
 - [x] Import from Postman, Bruno, Insomnia, OpenAPI
-- [ ] Import from Hoppscotch, HAR
+- [x] Import from Hoppscotch, HAR
 - [x] Import from cURL
 - [x] Export to Postman, OpenAPI
-- [ ] Export to ApiArk YAML
+- [x] Export to ApiArk YAML
 
 **CLI Tool (`apiark`):**
 - [x] `apiark run`, `apiark import`, `apiark export`
 - [x] Reporters: json, junit, html
-- [ ] npm package: `@apiark/cli`
+- [x] npm package: `@apiark/cli`
 
 **Auto-Save (§29):**
 - [x] Debounced 1s auto-save for saved requests (atomic write)
@@ -312,18 +312,18 @@ No tool currently delivers ALL of these simultaneously:
 - [x] `notify` crate for watching collection directories
 - [x] Debounced (300ms) external change detection
 - [x] Auto-reload for unchanged tabs, conflict banner for dirty tabs
-- [ ] Git merge conflict marker detection
+- [x] Git merge conflict marker detection
 
 **Onboarding (§26):**
 - [x] Welcome screen (start from scratch / import / open folder)
 - [x] Sample collection with example requests (httpbin.org)
-- [ ] Contextual hints (dismissible, shown once)
+- [x] Contextual hints (dismissible, shown once)
 - [x] Empty states with action buttons for all panels
 
 **Error Handling & Logging (§19):**
 - [x] `tracing` log rotation (daily, 7 days / 50MB max)
 - [x] SQLite integrity check on startup with auto-recovery
-- [ ] Opt-in crash report banner (local JSON files)
+- [x] Opt-in crash report banner (local JSON files)
 - [ ] In-app Console panel (bottom bar) for logs and script output
 - [x] Categorized network errors with suggestions
 
@@ -331,14 +331,14 @@ No tool currently delivers ALL of these simultaneously:
 - [x] Virtual scrolling for collection tree and history (TanStack Virtual)
 - [x] Lazy loading — parse request YAML only when tab opens
 - [x] Response body >1MB truncated with temp file and "Load full response" button
-- [ ] Background YAML parsing on Rust thread (skeleton UI during load)
-- [ ] In-memory fuzzy search index for collections
+- [x] Background YAML parsing on Rust thread (skeleton UI during load)
+- [x] In-memory fuzzy search index for collections
 
 **Cookie Jar Management (§37):**
 - [x] Cookie viewer/editor UI in response panel and sidebar
 - [x] Per-collection isolated cookie jars
 - [x] Persistent cookie mode (opt-in per collection)
-- [ ] Per-request cookie override in YAML
+- [x] Per-request cookie override in YAML
 - [ ] Collection-level sendCookies/storeCookies toggles
 
 ### Phase 3 — Enterprise Features (Days 181-365)

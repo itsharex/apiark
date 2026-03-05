@@ -63,6 +63,10 @@ http-body = "1"
 tower = "0.5"
 fake = { version = "3", features = ["derive"] }
 cron = "0.15"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+md4 = "0.10"
+des = "0.8"
+walkdir = "2"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

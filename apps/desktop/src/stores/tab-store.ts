@@ -371,7 +371,22 @@ export const useTabStore = create<TabState>((set, get) => ({
         activeTabId: tab.id,
       }));
     } catch (err) {
-      console.error("Failed to open request file:", err);
+      const errStr = String((err as { message?: string })?.message ?? err);
+      if (errStr.includes("MERGE_CONFLICT:")) {
+        // Open a blank tab with merge-conflict state
+        const tab = createEmptyTab({
+          name: filePath.split("/").pop()?.replace(".yaml", "") ?? "Conflict",
+          filePath,
+          collectionPath,
+          conflictState: "merge-conflict",
+        });
+        set((state) => ({
+          tabs: [...state.tabs, tab],
+          activeTabId: tab.id,
+        }));
+      } else {
+        console.error("Failed to open request file:", err);
+      }
     }
   },
 

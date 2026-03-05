@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTabStore, useActiveTab } from "@/stores/tab-store";
 import { KeyValueEditor } from "@/components/request/key-value-editor";
 import { ResponsePanel } from "@/components/response/response-panel";
+import { CodeEditor } from "@/components/ui/code-editor";
 import { Send, Download } from "lucide-react";
 import type { AuthConfig } from "@apiark/types";
 
@@ -146,13 +147,15 @@ export function GraphQLView() {
                     className="rounded bg-[var(--color-elevated)] px-2 py-1 text-xs text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none"
                   />
                 </div>
-                <textarea
-                  value={tab.graphql.query}
-                  onChange={(e) => setGraphQLQuery(e.target.value)}
-                  placeholder={"query {\n  users {\n    id\n    name\n  }\n}"}
-                  className="flex-1 resize-none rounded bg-[var(--color-elevated)] p-3 font-mono text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-purple-500"
-                  spellCheck={false}
-                />
+                <div className="flex-1">
+                  <CodeEditor
+                    value={tab.graphql.query}
+                    onChange={(v) => setGraphQLQuery(v)}
+                    language="graphql"
+                    height="100%"
+                    placeholder="query { users { id name } }"
+                  />
+                </div>
               </div>
             )}
 
@@ -161,13 +164,15 @@ export function GraphQLView() {
                 <label className="text-xs font-medium text-[var(--color-text-secondary)]">
                   Variables (JSON)
                 </label>
-                <textarea
-                  value={tab.graphql.variables}
-                  onChange={(e) => setGraphQLVariables(e.target.value)}
-                  placeholder={'{\n  "id": "123"\n}'}
-                  className="flex-1 resize-none rounded bg-[var(--color-elevated)] p-3 font-mono text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-purple-500"
-                  spellCheck={false}
-                />
+                <div className="flex-1">
+                  <CodeEditor
+                    value={tab.graphql.variables}
+                    onChange={(v) => setGraphQLVariables(v)}
+                    language="json"
+                    height="100%"
+                    placeholder='{ "id": "123" }'
+                  />
+                </div>
               </div>
             )}
 
