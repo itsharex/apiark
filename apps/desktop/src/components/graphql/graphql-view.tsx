@@ -132,9 +132,9 @@ export function GraphQLView() {
           </div>
 
           {/* Content */}
-          <div className="min-h-0 flex-1 overflow-auto p-3">
+          <div className="flex min-h-0 flex-1 flex-col p-3">
             {activeTab === "query" && (
-              <div className="flex min-h-0 h-full flex-col gap-2">
+              <div className="flex min-h-0 flex-1 flex-col gap-2">
                 <div className="flex shrink-0 items-center justify-between">
                   <label className="text-xs font-medium text-[var(--color-text-secondary)]">
                     GraphQL Query
@@ -160,7 +160,7 @@ export function GraphQLView() {
             )}
 
             {activeTab === "variables" && (
-              <div className="flex min-h-0 h-full flex-col gap-2">
+              <div className="flex min-h-0 flex-1 flex-col gap-2">
                 <label className="shrink-0 text-xs font-medium text-[var(--color-text-secondary)]">
                   Variables (JSON)
                 </label>
@@ -177,16 +177,20 @@ export function GraphQLView() {
             )}
 
             {activeTab === "headers" && (
-              <KeyValueEditor
-                pairs={tab.headers}
-                onChange={setHeaders}
-                keyPlaceholder="Header"
-                valuePlaceholder="Value"
-              />
+              <div className="overflow-auto">
+                <KeyValueEditor
+                  pairs={tab.headers}
+                  onChange={setHeaders}
+                  keyPlaceholder="Header"
+                  valuePlaceholder="Value"
+                />
+              </div>
             )}
 
             {activeTab === "auth" && (
-              <AuthEditorCompact auth={tab.auth} onChange={setAuth} />
+              <div className="overflow-auto">
+                <AuthEditorCompact auth={tab.auth} onChange={setAuth} />
+              </div>
             )}
           </div>
 
