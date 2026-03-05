@@ -42,19 +42,28 @@ export function ConsoleBottomBar() {
 
   if (!open) {
     return (
-      <button
-        onClick={toggle}
-        className="flex items-center gap-2 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-elevated)] hover:text-[var(--color-text-primary)]"
-      >
-        <Terminal className="h-3.5 w-3.5" />
-        Console
-        {entries.length > 0 && (
-          <span className="rounded-full bg-[var(--color-accent)]/20 px-2 py-0.5 text-[10px] font-bold text-[var(--color-accent)]">
-            {entries.length}
-          </span>
-        )}
-        <ChevronDown className="ml-auto h-3 w-3 rotate-180 text-[var(--color-text-dimmed)]" />
-      </button>
+      <div className="flex items-center border-t border-[var(--color-border)] bg-[var(--color-elevated)]">
+        <button
+          onClick={toggle}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)]"
+        >
+          <Terminal className="h-4 w-4" />
+          Console
+          {entries.length > 0 && (
+            <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
+              {entries.length}
+            </span>
+          )}
+        </button>
+        <div className="flex-1" />
+        <button
+          onClick={toggle}
+          className="mr-3 rounded p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-border)] hover:text-[var(--color-text-primary)]"
+          title="Open Console"
+        >
+          <ChevronDown className="h-4 w-4 rotate-180" />
+        </button>
+      </div>
     );
   }
 

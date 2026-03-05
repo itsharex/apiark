@@ -211,11 +211,12 @@ function NewTabDropdown() {
     <div ref={ref} className="relative flex items-center">
       <button
         onClick={() => setOpen(!open)}
-        className="mx-2 flex shrink-0 items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-elevated)] px-2.5 py-1 text-xs font-medium text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-accent)]/50 hover:bg-[var(--color-accent)]/10 hover:text-[var(--color-accent)]"
+        className="mx-3 flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-95"
         title="New Tab"
       >
-        <Plus className="h-3.5 w-3.5" />
-        <ChevronDown className="h-2.5 w-2.5" />
+        <Plus className="h-4 w-4" strokeWidth={2.5} />
+        <span>New</span>
+        <ChevronDown className="h-3 w-3 opacity-70" />
       </button>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-1 min-w-[160px] rounded border border-[var(--color-border)] bg-[var(--color-elevated)] py-1 shadow-lg">
