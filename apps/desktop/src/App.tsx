@@ -34,7 +34,7 @@ import { GuidedTour } from "@/components/onboarding/guided-tour";
 import { ConsoleBottomBar } from "@/components/console/console-panel";
 import { useCollectionStore } from "@/stores/collection-store";
 import { AiAssistantDialog } from "@/components/ai/ai-assistant-dialog";
-import { AlertCircle, X, RefreshCw, FileX, GitMerge, Shield, Zap } from "lucide-react";
+import { AlertCircle, X, RefreshCw, FileX, GitMerge, Shield, ArrowRightLeft } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useResponsive } from "@/hooks/use-responsive";
 
@@ -381,7 +381,7 @@ function EmptyState() {
     <div className="flex flex-1 flex-col items-center justify-center gap-6">
       {/* Logo */}
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-accent)] shadow-lg">
-        <Zap className="h-8 w-8 text-white" />
+        <ArrowRightLeft className="h-8 w-8 text-white" />
       </div>
 
       <div className="text-center">
