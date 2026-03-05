@@ -366,7 +366,7 @@ No tool currently delivers ALL of these simultaneously:
 - [x] Content Security Policy (no eval, no remote scripts)
 - [x] Secret redaction in history (`[REDACTED]` for auth tokens)
 - [x] IPC command allowlist (no arbitrary shell/fs access)
-- [ ] `cargo audit` + `pnpm audit` in CI
+- [x] `cargo audit` + `pnpm audit` in CI
 
 **Accessibility (§22):**
 - [ ] WCAG 2.1 Level AA compliance
@@ -402,8 +402,8 @@ No tool currently delivers ALL of these simultaneously:
 - [ ] Team tier: Git UI, team env sharing, SSO/SAML, audit logs
 
 **Data Portability (§32):**
-- [ ] Schema documentation (`docs/schema.md`) with JSON Schema definitions
-- [ ] No Lock-In Pledge on website and README
+- [x] Schema documentation (`docs/schema.md`) with JSON Schema definitions
+- [x] No Lock-In Pledge on website and README
 
 **Backup & State Export (§36):**
 - [x] Export app state as .zip (settings, window state, history)

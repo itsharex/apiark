@@ -20,6 +20,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - name: Security audit (npm)
+        run: pnpm audit --audit-level=high
 
   check-rust:
     runs-on: ubuntu-latest
@@ -42,3 +44,8 @@ jobs:
       - name: Rust format check
         working-directory: apps/desktop/src-tauri
         run: cargo fmt -- --check
+      - name: Security audit (cargo)
+        run: |
+          cargo install cargo-audit --quiet
+          cargo audit --file apps/desktop/src-tauri/Cargo.lock
+          cargo audit --file apps/cli/Cargo.lock
