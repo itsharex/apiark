@@ -130,7 +130,7 @@ export default function HoppscotchComparison() {
             Hoppscotch has beautiful design. ApiArk matches it with a desktop-first experience, filesystem storage, and enterprise features.
           </p>
           <a
-            href="https://github.com/berbicanes/apiark/releases/latest"
+            href="/download"
             className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-[var(--color-accent)] to-indigo-400 text-white font-semibold text-lg hover:opacity-90 transition-opacity"
           >
             Download ApiArk <ArrowRight className="w-5 h-5" />

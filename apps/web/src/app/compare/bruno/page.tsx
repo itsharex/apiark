@@ -350,7 +350,7 @@ export default function CompareBrunoPage() {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <a
-                  href="https://github.com/berbicanes/apiark/releases/latest"
+                  href="/download"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group relative flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-xl hover:shadow-indigo-500/30"

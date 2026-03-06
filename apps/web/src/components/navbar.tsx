@@ -10,7 +10,7 @@ const navLinks = [
   { label: "Features", href: "#features" },
   { label: "Protocols", href: "#protocols" },
   { label: "Performance", href: "#performance" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "Pricing", href: "/pricing" },
 ];
 
 const compareLinks = [
@@ -170,7 +170,7 @@ export default function Navbar() {
             </a>
 
             <a
-              href="https://github.com/berbicanes/apiark/releases/latest"
+              href="/download"
               target="_blank"
               rel="noopener noreferrer"
               className="group relative flex items-center gap-2 overflow-hidden rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-xl hover:shadow-indigo-500/30"
@@ -259,7 +259,7 @@ export default function Navbar() {
               </a>
 
               <a
-                href="https://github.com/berbicanes/apiark/releases/latest"
+                href="/download"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:shadow-xl hover:shadow-indigo-500/30"

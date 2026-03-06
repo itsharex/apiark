@@ -17,7 +17,7 @@ const tiers = [
     period: "forever",
     description: "Everything you need to build APIs",
     cta: "Download Free",
-    ctaHref: "https://github.com/berbicanes/apiark/releases/latest",
+    ctaHref: "/download",
     highlighted: false,
     badge: null,
     icon: Download,
