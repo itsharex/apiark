@@ -131,6 +131,7 @@ pub fn parse_openapi(content: &str) -> Result<ImportData, String> {
                     method: method_upper,
                     url: final_url,
                     headers,
+                    params: None,
                     body: Box::new(body),
                     auth: Box::new(None),
                     description,

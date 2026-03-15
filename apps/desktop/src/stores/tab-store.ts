@@ -96,7 +96,9 @@ function generateTabId(): string {
   return `tab_${Date.now()}_${++tabCounter}`;
 }
 
-const emptyKvRow = (): KeyValuePair => ({ key: "", value: "", enabled: true });
+let kvCounter = 0;
+const kvId = () => `kv_${Date.now()}_${++kvCounter}`;
+const emptyKvRow = (): KeyValuePair => ({ id: kvId(), key: "", value: "", enabled: true });
 
 function createEmptyTab(overrides?: Partial<Tab>): Tab {
   return {
@@ -156,13 +158,13 @@ function requestFileToTab(
 ): Tab {
   // Convert Record<string, string> headers to KeyValuePair[]
   const headers: KeyValuePair[] = Object.entries(file.headers || {}).map(
-    ([key, value]) => ({ key, value, enabled: true }),
+    ([key, value]) => ({ id: kvId(), key, value, enabled: true }),
   );
   if (headers.length === 0) headers.push(emptyKvRow());
 
   // Convert Record<string, string> params to KeyValuePair[]
   const params: KeyValuePair[] = Object.entries(file.params || {}).map(
-    ([key, value]) => ({ key, value, enabled: true }),
+    ([key, value]) => ({ id: kvId(), key, value, enabled: true }),
   );
   if (params.length === 0) params.push(emptyKvRow());
 
@@ -356,7 +358,7 @@ export const useTabStore = create<TabState>((set, get) => ({
         selectedService: null,
         selectedMethod: null,
         requestJson: "{}",
-        metadata: [{ key: "", value: "", enabled: true }],
+        metadata: [emptyKvRow()],
         response: null,
         loading: false,
         error: null,
@@ -547,7 +549,7 @@ export const useTabStore = create<TabState>((set, get) => ({
       body = { type: "json", content: JSON.stringify(gqlBody), formData: [] };
       // Auto-add Content-Type if not present
       if (!headers.some((h) => h.key.toLowerCase() === "content-type")) {
-        headers = [{ key: "Content-Type", value: "application/json", enabled: true }, ...headers];
+        headers = [{ id: kvId(), key: "Content-Type", value: "application/json", enabled: true }, ...headers];
       }
     }
 
@@ -838,6 +840,8 @@ export const useTabStore = create<TabState>((set, get) => ({
       const persisted = await loadPersistedState();
       if (persisted.tabs.length === 0) return;
 
+      const collectionPaths = new Set<string>();
+
       for (const pt of persisted.tabs) {
         try {
           const file = await readRequestFile(pt.filePath);
@@ -846,8 +850,11 @@ export const useTabStore = create<TabState>((set, get) => ({
             tabs: [...state.tabs, tab],
             activeTabId: state.activeTabId ?? tab.id,
           }));
+          if (pt.collectionPath) collectionPaths.add(pt.collectionPath);
         } catch {
           // File may have been deleted, skip it
+          // Still try to restore the collection sidebar
+          if (pt.collectionPath) collectionPaths.add(pt.collectionPath);
         }
       }
 
@@ -857,6 +864,15 @@ export const useTabStore = create<TabState>((set, get) => ({
         if (persisted.activeTabIndex < tabs.length) {
           set({ activeTabId: tabs[persisted.activeTabIndex].id });
         }
+      }
+
+      // Re-open collections in the sidebar
+      if (collectionPaths.size > 0) {
+        import("@/stores/collection-store").then(({ useCollectionStore }) => {
+          for (const path of collectionPaths) {
+            useCollectionStore.getState().openCollection(path).catch(() => {});
+          }
+        });
       }
     } catch (err) {
       import("@/stores/toast-store").then(({ useToastStore }) =>

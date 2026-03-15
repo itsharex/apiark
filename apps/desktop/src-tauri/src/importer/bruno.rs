@@ -178,6 +178,7 @@ fn parse_bru_request(content: &str) -> Option<ImportItem> {
         method,
         url,
         headers,
+        params: None,
         body: Box::new(body),
         auth: Box::new(auth),
         description: None,

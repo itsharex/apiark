@@ -32,6 +32,7 @@ pub enum ImportItem {
         method: String,
         url: String,
         headers: HashMap<String, String>,
+        params: Option<HashMap<String, String>>,
         body: Box<Option<ImportBody>>,
         auth: Box<Option<AuthConfig>>,
         description: Option<String>,

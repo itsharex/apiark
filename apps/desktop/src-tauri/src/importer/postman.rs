@@ -86,7 +86,7 @@ fn parse_item(item: &Value, warnings: &mut Vec<ImportWarning>) -> Option<ImportI
         .unwrap_or("GET")
         .to_uppercase();
 
-    let url = parse_url(req.get("url"));
+    let (url, path_variables) = parse_url(req.get("url"));
 
     let headers = parse_headers(req.get("header"));
 
@@ -149,6 +149,7 @@ fn parse_item(item: &Value, warnings: &mut Vec<ImportWarning>) -> Option<ImportI
         method,
         url,
         headers,
+        params: if path_variables.is_empty() { None } else { Some(path_variables) },
         body: Box::new(body),
         auth: Box::new(auth),
         description,
@@ -158,14 +159,35 @@ fn parse_item(item: &Value, warnings: &mut Vec<ImportWarning>) -> Option<ImportI
     })
 }
 
-fn parse_url(url_val: Option<&Value>) -> String {
+fn parse_url(url_val: Option<&Value>) -> (String, HashMap<String, String>) {
+    let empty_vars = HashMap::new();
     match url_val {
-        None => String::new(),
-        Some(v) if v.is_string() => v.as_str().unwrap_or("").to_string(),
+        None => (String::new(), empty_vars),
+        Some(v) if v.is_string() => (v.as_str().unwrap_or("").to_string(), empty_vars),
         Some(v) => {
+            // Extract path variables from url.variable[]
+            let path_variables = v
+                .get("variable")
+                .and_then(|vars| vars.as_array())
+                .map(|arr| {
+                    let mut map = HashMap::new();
+                    for var in arr {
+                        if let Some(key) = var.get("key").and_then(|k| k.as_str()) {
+                            let value = var
+                                .get("value")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_string();
+                            map.insert(key.to_string(), value);
+                        }
+                    }
+                    map
+                })
+                .unwrap_or_default();
+
             // Postman URL object: { raw, host, path, query, ... }
             if let Some(raw) = v.get("raw").and_then(|r| r.as_str()) {
-                return raw.to_string();
+                return (raw.to_string(), path_variables);
             }
             // Reconstruct from parts
             let host = v
@@ -197,7 +219,7 @@ fn parse_url(url_val: Option<&Value>) -> String {
                 .and_then(|p| p.as_str())
                 .unwrap_or("https");
 
-            format!("{protocol}://{host}/{path}")
+            (format!("{protocol}://{host}/{path}"), path_variables)
         }
     }
 }

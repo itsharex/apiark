@@ -23,9 +23,9 @@ use std::sync::{Arc, Mutex};
 use commands::ai::{ai_generate_request, ai_generate_tests};
 use commands::backup::{export_app_state, import_app_state};
 use commands::collection::{
-    create_folder, create_request, create_sample_collection, delete_item, get_collection_defaults,
-    open_collection, read_request_file, rename_item, save_folder_order, save_request_file,
-    update_collection_defaults,
+    create_collection, create_folder, create_request, create_sample_collection, delete_item,
+    get_collection_defaults, open_collection, read_request_file, rename_item, save_folder_order,
+    save_request_file, update_collection_defaults,
 };
 use commands::cookies::{clear_cookie_jar, delete_cookie, get_cookie_jar};
 use commands::curl::{export_curl_command, parse_curl_command};
@@ -213,6 +213,7 @@ pub fn run() {
             rename_item,
             save_folder_order,
             create_sample_collection,
+            create_collection,
             get_collection_defaults,
             update_collection_defaults,
             // Migration commands

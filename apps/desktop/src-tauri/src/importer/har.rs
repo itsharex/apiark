@@ -94,6 +94,7 @@ pub fn parse_har(content: &str) -> Result<ImportData, String> {
             method,
             url,
             headers,
+            params: None,
             body: Box::new(body),
             auth: Box::new(None),
             description: None,

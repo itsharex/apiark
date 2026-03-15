@@ -38,30 +38,30 @@ export function StatusBar({ onToggleTerminal, terminalOpen }: StatusBarProps) {
   };
 
   return (
-    <div className="flex h-6 shrink-0 items-center border-t border-[var(--color-border)] bg-[var(--color-activity-bar)] px-2 text-[11px]">
+    <div className="flex h-8 shrink-0 items-center border-t border-[var(--color-border)] bg-[var(--color-activity-bar)] px-3 text-xs">
       {/* Left side */}
       <div className="flex items-center gap-3">
         {activeEnv && (
           <span className="flex items-center gap-1 text-[var(--color-text-muted)]">
-            <Globe className="h-3 w-3" />
+            <Globe className="h-3.5 w-3.5" />
             {activeEnv}
           </span>
         )}
         {collections.length > 0 && (
           <span className="flex items-center gap-1 text-[var(--color-text-muted)]">
-            <FolderOpen className="h-3 w-3" />
+            <FolderOpen className="h-3.5 w-3.5" />
             {collections.length} collection{collections.length !== 1 ? "s" : ""}
           </span>
         )}
         {runningMocks > 0 && (
           <span className="flex items-center gap-1 text-[var(--color-success)]">
-            <Server className="h-3 w-3" />
+            <Server className="h-3.5 w-3.5" />
             {runningMocks} mock{runningMocks !== 1 ? "s" : ""}
           </span>
         )}
         {activeMonitors > 0 && (
           <span className="flex items-center gap-1 text-[var(--color-success)]">
-            <Activity className="h-3 w-3" />
+            <Activity className="h-3.5 w-3.5" />
             {activeMonitors} monitor{activeMonitors !== 1 ? "s" : ""}
           </span>
         )}
@@ -74,16 +74,16 @@ export function StatusBar({ onToggleTerminal, terminalOpen }: StatusBarProps) {
         {/* Console toggle */}
         <button
           onClick={toggleConsole}
-          className={`flex items-center gap-1 rounded px-1.5 py-0.5 transition-colors ${
+          className={`flex items-center gap-1 rounded px-2 py-1 transition-colors ${
             consoleOpen
               ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)]"
               : "text-[var(--color-text-dimmed)] hover:text-[var(--color-text-secondary)]"
           }`}
           title="Toggle Console"
         >
-          <ScrollText className="h-3 w-3" />
+          <ScrollText className="h-3.5 w-3.5" />
           {consoleEntries.length > 0 && (
-            <span className={`text-[10px] font-bold ${hasErrors ? "text-[var(--color-error)]" : ""}`}>
+            <span className={`text-[11px] font-bold ${hasErrors ? "text-[var(--color-error)]" : ""}`}>
               {consoleEntries.length}
             </span>
           )}
@@ -93,14 +93,14 @@ export function StatusBar({ onToggleTerminal, terminalOpen }: StatusBarProps) {
         {onToggleTerminal && (
           <button
             onClick={onToggleTerminal}
-            className={`flex items-center gap-1 rounded px-1.5 py-0.5 transition-colors ${
+            className={`flex items-center gap-1 rounded px-2 py-1 transition-colors ${
               terminalOpen
                 ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)]"
                 : "text-[var(--color-text-dimmed)] hover:text-[var(--color-text-secondary)]"
             }`}
             title="Toggle Terminal (Ctrl+`)"
           >
-            <Terminal className="h-3 w-3" />
+            <Terminal className="h-3.5 w-3.5" />
           </button>
         )}
 
@@ -117,11 +117,11 @@ export function StatusBar({ onToggleTerminal, terminalOpen }: StatusBarProps) {
           }
         >
           {layout === "horizontal" ? (
-            <Columns2 className="h-3 w-3" />
+            <Columns2 className="h-3.5 w-3.5" />
           ) : layout === "vertical" ? (
-            <Rows2 className="h-3 w-3" />
+            <Rows2 className="h-3.5 w-3.5" />
           ) : (
-            <LayoutList className="h-3 w-3" />
+            <LayoutList className="h-3.5 w-3.5" />
           )}
         </button>
 

@@ -3,10 +3,12 @@ import { useCollectionStore } from "@/stores/collection-store";
 import { CollectionTree } from "./collection-tree";
 import { EnvironmentSelector } from "@/components/environment/environment-selector";
 import { HistoryPanel } from "@/components/history/history-panel";
-import { FolderOpen, ChevronDown, ChevronRight, Settings, Search, X } from "lucide-react";
+import { FolderOpen, FolderPlus, ChevronDown, ChevronRight, Settings, Search, X, Upload } from "lucide-react";
 import { EmptyState, FolderPlusIcon } from "@/components/ui/empty-state";
 import { open } from "@tauri-apps/plugin-dialog";
+import { createCollection } from "@/lib/tauri-api";
 import { useSettingsStore } from "@/stores/settings-store";
+import * as Dialog from "@radix-ui/react-dialog";
 
 type SidebarSection = "collections" | "environments" | "history";
 
@@ -14,15 +16,17 @@ interface CollectionSidebarProps {
   onOpenSettings?: () => void;
   collapsed?: boolean;
   envSelectorRef?: React.RefObject<HTMLSelectElement | null>;
+  onOpenImport?: () => void;
 }
 
-export function CollectionSidebar({ onOpenSettings, collapsed, envSelectorRef }: CollectionSidebarProps) {
+export function CollectionSidebar({ onOpenSettings, collapsed, envSelectorRef, onOpenImport }: CollectionSidebarProps) {
   const sidebarWidth = useSettingsStore((s) => s.settings.sidebarWidth);
   const { collections, openCollection } = useCollectionStore();
   const [expandedSections, setExpandedSections] = useState<Set<SidebarSection>>(
     new Set(["collections", "environments"]),
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [newCollectionOpen, setNewCollectionOpen] = useState(false);
 
   if (collapsed) return null;
 
@@ -115,15 +119,33 @@ export function CollectionSidebar({ onOpenSettings, collapsed, envSelectorRef }:
                 <EmptyState
                   icon={<FolderPlusIcon size={36} />}
                   title="No collections open"
-                  description="Open a folder or import a collection"
+                  description="Create a new collection or open an existing folder"
                   action={
-                    <button
-                      onClick={handleOpenFolder}
-                      className="flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-accent-hover)]"
-                    >
-                      <FolderOpen className="h-3.5 w-3.5" />
-                      Open Folder
-                    </button>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={() => setNewCollectionOpen(true)}
+                        className="flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-accent-hover)]"
+                      >
+                        <FolderPlus className="h-3.5 w-3.5" />
+                        New Collection
+                      </button>
+                      <button
+                        onClick={handleOpenFolder}
+                        className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-elevated)]"
+                      >
+                        <FolderOpen className="h-3.5 w-3.5" />
+                        Open Folder
+                      </button>
+                      {onOpenImport && (
+                        <button
+                          onClick={onOpenImport}
+                          className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-elevated)]"
+                        >
+                          <Upload className="h-3.5 w-3.5" />
+                          Import Collection
+                        </button>
+                      )}
+                    </div>
                   }
                 />
               ) : (
@@ -141,13 +163,31 @@ export function CollectionSidebar({ onOpenSettings, collapsed, envSelectorRef }:
                       searchQuery={searchQuery}
                     />
                   ))}
-                  <button
-                    onClick={handleOpenFolder}
-                    className="mt-1 flex w-full items-center gap-1.5 rounded px-2 py-1 text-xs text-[var(--color-text-dimmed)] hover:text-[var(--color-text-secondary)]"
-                  >
-                    <FolderOpen className="h-3 w-3" />
-                    Open Another
-                  </button>
+                  <div className="mt-1 flex gap-1 px-2">
+                    <button
+                      onClick={() => setNewCollectionOpen(true)}
+                      className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-[var(--color-text-dimmed)] hover:text-[var(--color-text-secondary)]"
+                    >
+                      <FolderPlus className="h-3 w-3" />
+                      New
+                    </button>
+                    <button
+                      onClick={handleOpenFolder}
+                      className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-[var(--color-text-dimmed)] hover:text-[var(--color-text-secondary)]"
+                    >
+                      <FolderOpen className="h-3 w-3" />
+                      Open
+                    </button>
+                    {onOpenImport && (
+                      <button
+                        onClick={onOpenImport}
+                        className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-[var(--color-text-dimmed)] hover:text-[var(--color-text-secondary)]"
+                      >
+                        <Upload className="h-3 w-3" />
+                        Import
+                      </button>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -194,6 +234,140 @@ export function CollectionSidebar({ onOpenSettings, collapsed, envSelectorRef }:
           )}
         </div>
       </div>
+
+      <NewCollectionDialog
+        open={newCollectionOpen}
+        onOpenChange={setNewCollectionOpen}
+        onCreated={openCollection}
+      />
     </aside>
+  );
+}
+
+function NewCollectionDialog({
+  open: isOpen,
+  onOpenChange,
+  onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreated: (path: string) => Promise<void>;
+}) {
+  const [name, setName] = useState("");
+  const [parentDir, setParentDir] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      setName("");
+      setParentDir("");
+      setError("");
+    }
+    onOpenChange(open);
+  };
+
+  const handlePickFolder = async () => {
+    try {
+      const selected = await open({ directory: true, multiple: false });
+      if (selected) setParentDir(selected as string);
+    } catch { /* cancelled */ }
+  };
+
+  const handleCreate = async () => {
+    if (!name.trim() || !parentDir) return;
+    setCreating(true);
+    setError("");
+    try {
+      const path = await createCollection(parentDir, name.trim());
+      await onCreated(path);
+      onOpenChange(false);
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const canCreate = name.trim() && parentDir && !creating;
+
+  return (
+    <Dialog.Root open={isOpen} onOpenChange={handleOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[440px] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl">
+          <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
+            <Dialog.Title className="text-sm font-medium text-[var(--color-text-primary)]">
+              New Collection
+            </Dialog.Title>
+            <Dialog.Close className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-elevated)]">
+              <X className="h-4 w-4" />
+            </Dialog.Close>
+          </div>
+
+          <div className="space-y-4 p-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-[var(--color-text-secondary)]">
+                Collection Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="My API"
+                autoFocus
+                className="w-full rounded bg-[var(--color-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && canCreate) handleCreate();
+                }}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-[var(--color-text-secondary)]">
+                Location
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={parentDir}
+                  readOnly
+                  placeholder="Choose a folder..."
+                  className="flex-1 rounded bg-[var(--color-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none"
+                />
+                <button
+                  onClick={handlePickFolder}
+                  className="shrink-0 rounded bg-[var(--color-elevated)] px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]"
+                >
+                  Browse
+                </button>
+              </div>
+              {name.trim() && parentDir && (
+                <p className="text-[11px] text-[var(--color-text-dimmed)]">
+                  Will create: {parentDir}/{name.trim().toLowerCase().replace(/\s+/g, "-")}
+                </p>
+              )}
+            </div>
+
+            {error && (
+              <p className="text-xs text-red-400">{error}</p>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 border-t border-[var(--color-border)] px-4 py-3">
+            <Dialog.Close className="rounded px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-elevated)]">
+              Cancel
+            </Dialog.Close>
+            <button
+              onClick={handleCreate}
+              disabled={!canCreate}
+              className="rounded bg-[var(--color-accent)] px-4 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
+            >
+              {creating ? "Creating..." : "Create"}
+            </button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

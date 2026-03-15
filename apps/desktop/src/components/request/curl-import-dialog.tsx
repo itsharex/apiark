@@ -5,6 +5,9 @@ import { parseCurlCommand } from "@/lib/tauri-api";
 import { useTabStore } from "@/stores/tab-store";
 import type { HttpMethod, KeyValuePair, BodyType } from "@apiark/types";
 
+let kvCounter = 0;
+const kvId = () => `kv_${Date.now()}_${++kvCounter}`;
+
 interface CurlImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -35,9 +38,9 @@ export function CurlImportDialog({ open, onOpenChange }: CurlImportDialogProps) 
 
         // Set headers
         const headers: KeyValuePair[] = Object.entries(parsed.headers).map(
-          ([key, value]) => ({ key, value, enabled: true }),
+          ([key, value]) => ({ id: kvId(), key, value, enabled: true }),
         );
-        if (headers.length > 0) setHeaders([...headers, { key: "", value: "", enabled: true }]);
+        if (headers.length > 0) setHeaders([...headers, { id: kvId(), key: "", value: "", enabled: true }]);
 
         // Set body
         if (parsed.body) {

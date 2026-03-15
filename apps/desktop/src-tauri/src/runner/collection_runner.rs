@@ -37,11 +37,7 @@ fn request_file_to_params(file: &RequestFile) -> SendRequestParams {
     let headers: Vec<KeyValuePair> = file
         .headers
         .iter()
-        .map(|(k, v)| KeyValuePair {
-            key: k.clone(),
-            value: v.clone(),
-            enabled: true,
-        })
+        .map(|(k, v)| KeyValuePair::new(k.clone(), v.clone(), true))
         .collect();
 
     let params: Vec<KeyValuePair> = file
@@ -49,11 +45,7 @@ fn request_file_to_params(file: &RequestFile) -> SendRequestParams {
         .as_ref()
         .map(|p| {
             p.iter()
-                .map(|(k, v)| KeyValuePair {
-                    key: k.clone(),
-                    value: v.clone(),
-                    enabled: true,
-                })
+                .map(|(k, v)| KeyValuePair::new(k.clone(), v.clone(), true))
                 .collect()
         })
         .unwrap_or_default();
@@ -105,21 +97,21 @@ fn interpolate_params(
     interpolated.headers = params
         .headers
         .iter()
-        .map(|h| KeyValuePair {
-            key: interpolation::interpolate(&h.key, vars),
-            value: interpolation::interpolate(&h.value, vars),
-            enabled: h.enabled,
-        })
+        .map(|h| KeyValuePair::new(
+            interpolation::interpolate(&h.key, vars),
+            interpolation::interpolate(&h.value, vars),
+            h.enabled,
+        ))
         .collect();
 
     interpolated.params = params
         .params
         .iter()
-        .map(|p| KeyValuePair {
-            key: interpolation::interpolate(&p.key, vars),
-            value: interpolation::interpolate(&p.value, vars),
-            enabled: p.enabled,
-        })
+        .map(|p| KeyValuePair::new(
+            interpolation::interpolate(&p.key, vars),
+            interpolation::interpolate(&p.value, vars),
+            p.enabled,
+        ))
         .collect();
 
     if let Some(ref body) = params.body {

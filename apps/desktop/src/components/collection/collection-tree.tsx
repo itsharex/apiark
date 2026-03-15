@@ -19,6 +19,7 @@ import {
   GripVertical,
   Cookie,
   X,
+  FolderX,
 } from "lucide-react";
 import { getCollectionDefaults, updateCollectionDefaults } from "@/lib/tauri-api";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -595,6 +596,31 @@ function TreeNodeRow({
                       closeContextMenu();
                       setCookieSettingsPath(node.path);
                     },
+                  },
+                  {
+                    label: "Close Collection",
+                    icon: FolderX,
+                    onClick: () => {
+                      closeContextMenu();
+                      useCollectionStore.getState().closeCollection(collectionPath);
+                    },
+                  },
+                  {
+                    label: "Delete Collection",
+                    icon: Trash2,
+                    onClick: async () => {
+                      closeContextMenu();
+                      if (!confirm(`Delete collection "${node.name}"? This will move the entire collection to trash.`)) return;
+                      try {
+                        await deleteItem(node.path, collectionName, collectionPath);
+                        useCollectionStore.getState().closeCollection(collectionPath);
+                      } catch (err) {
+                        import("@/stores/toast-store").then(({ useToastStore }) =>
+                          useToastStore.getState().showError(`Failed to delete collection: ${err}`),
+                        );
+                      }
+                    },
+                    danger: true,
                   },
                 ]
               : [

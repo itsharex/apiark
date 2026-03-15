@@ -194,3 +194,56 @@ pub async fn create_sample_collection() -> Result<String, String> {
 fn write_sample(path: &PathBuf, content: &str) -> Result<(), String> {
     std::fs::write(path, content).map_err(|e| format!("Failed to write {}: {e}", path.display()))
 }
+
+#[tauri::command]
+pub async fn create_collection(parent_dir: String, name: String) -> Result<String, String> {
+    let folder_name = name
+        .trim()
+        .to_lowercase()
+        .replace(|c: char| !c.is_alphanumeric() && c != '-' && c != '_', "-");
+    if folder_name.is_empty() {
+        return Err("Collection name cannot be empty".to_string());
+    }
+
+    let base = Path::new(&parent_dir).join(&folder_name);
+    if base.join(".apiark").join("apiark.yaml").exists() {
+        return Err(format!("Collection already exists at {}", base.display()));
+    }
+
+    let apiark_dir = base.join(".apiark");
+    let env_dir = apiark_dir.join("environments");
+
+    for d in [&apiark_dir, &env_dir] {
+        std::fs::create_dir_all(d)
+            .map_err(|e| format!("Failed to create directory: {e}"))?;
+    }
+
+    let config = CollectionConfig {
+        name: name.trim().to_string(),
+        version: 1,
+        defaults: Default::default(),
+    };
+    let config_yaml =
+        serde_yaml::to_string(&config).map_err(|e| format!("Failed to serialize config: {e}"))?;
+    std::fs::write(apiark_dir.join("apiark.yaml"), config_yaml)
+        .map_err(|e| format!("Failed to write config: {e}"))?;
+
+    // Default environment
+    std::fs::write(
+        env_dir.join("default.yaml"),
+        "name: Default\nvariables:\n  baseUrl: http://localhost:3000\n",
+    )
+    .map_err(|e| format!("Failed to write env: {e}"))?;
+
+    // .gitignore
+    std::fs::write(apiark_dir.join(".gitignore"), ".env\n")
+        .map_err(|e| format!("Failed to write .gitignore: {e}"))?;
+
+    let root_gitignore = base.join(".gitignore");
+    if !root_gitignore.exists() {
+        std::fs::write(&root_gitignore, ".env\n.env.local\n")
+            .map_err(|e| format!("Failed to write root .gitignore: {e}"))?;
+    }
+
+    Ok(base.to_string_lossy().to_string())
+}

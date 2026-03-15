@@ -119,9 +119,9 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
       setPreview(p);
 
       // Default target dir
-      const { homeDir } = await import("@tauri-apps/api/path");
+      const { homeDir, join } = await import("@tauri-apps/api/path");
       const home = await homeDir();
-      setTargetDir(`${home}ApiArk`);
+      setTargetDir(await join(home, "ApiArk"));
 
       setStep("preview");
     } catch (err) {

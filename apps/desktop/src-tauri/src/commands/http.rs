@@ -98,11 +98,11 @@ pub async fn send_request(
                         // We need to send raw header, so temporarily set auth to None
                         // and add the header manually
                         retry_params.auth = std::option::Option::None;
-                        retry_params.headers.push(KeyValuePair {
-                            key: "Authorization".to_string(),
-                            value: format!("NTLM {type3}"),
-                            enabled: true,
-                        });
+                        retry_params.headers.push(KeyValuePair::new(
+                            "Authorization".to_string(),
+                            format!("NTLM {type3}"),
+                            true,
+                        ));
                         result = HttpEngine::send(retry_params.clone()).await;
                     }
                     Err(e) => {
@@ -181,11 +181,7 @@ pub async fn send_request_with_scripts(
                 .request
                 .headers
                 .iter()
-                .map(|(k, v)| KeyValuePair {
-                    key: k.clone(),
-                    value: v.clone(),
-                    enabled: true,
-                })
+                .map(|(k, v)| KeyValuePair::new(k.clone(), v.clone(), true))
                 .collect();
             // Apply body mutation
             if let Some(body_str) = result.request.body {
@@ -322,21 +318,21 @@ fn interpolate_params(
     interpolated.headers = params
         .headers
         .iter()
-        .map(|h| KeyValuePair {
-            key: interpolation::interpolate(&h.key, vars),
-            value: interpolation::interpolate(&h.value, vars),
-            enabled: h.enabled,
-        })
+        .map(|h| KeyValuePair::new(
+            interpolation::interpolate(&h.key, vars),
+            interpolation::interpolate(&h.value, vars),
+            h.enabled,
+        ))
         .collect();
 
     interpolated.params = params
         .params
         .iter()
-        .map(|p| KeyValuePair {
-            key: interpolation::interpolate(&p.key, vars),
-            value: interpolation::interpolate(&p.value, vars),
-            enabled: p.enabled,
-        })
+        .map(|p| KeyValuePair::new(
+            interpolation::interpolate(&p.key, vars),
+            interpolation::interpolate(&p.value, vars),
+            p.enabled,
+        ))
         .collect();
 
     if let Some(ref body) = params.body {
@@ -345,11 +341,11 @@ fn interpolate_params(
         new_body.form_data = body
             .form_data
             .iter()
-            .map(|fd| KeyValuePair {
-                key: interpolation::interpolate(&fd.key, vars),
-                value: interpolation::interpolate(&fd.value, vars),
-                enabled: fd.enabled,
-            })
+            .map(|fd| KeyValuePair::new(
+                interpolation::interpolate(&fd.key, vars),
+                interpolation::interpolate(&fd.value, vars),
+                fd.enabled,
+            ))
             .collect();
         interpolated.body = Some(new_body);
     }

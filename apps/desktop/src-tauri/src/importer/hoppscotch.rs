@@ -124,6 +124,7 @@ fn parse_request(req: &Value, warnings: &mut Vec<ImportWarning>) -> Option<Impor
         method,
         url,
         headers,
+        params: None,
         body: Box::new(body),
         auth: Box::new(auth),
         description: None,

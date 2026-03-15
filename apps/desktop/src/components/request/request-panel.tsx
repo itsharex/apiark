@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTabStore, useActiveTab } from "@/stores/tab-store";
 import { KeyValueEditor } from "./key-value-editor";
-import type { AuthConfig, BodyType, OAuth2GrantType, OAuthTokenStatus } from "@apiark/types";
+import type { AuthConfig, BodyType, RequestBody, OAuth2GrantType, OAuthTokenStatus } from "@apiark/types";
 import { oauthStartFlow, oauthGetTokenStatus, oauthClearToken } from "@/lib/tauri-api";
 import { HintTooltip } from "@/components/ui/hint-tooltip";
 import { CodeEditor } from "@/components/ui/code-editor";
@@ -297,8 +297,8 @@ function BodyEditor({
   body,
   onChange,
 }: {
-  body: { type: BodyType; content: string; formData: { key: string; value: string; enabled: boolean }[] };
-  onChange: (body: { type: BodyType; content: string; formData: { key: string; value: string; enabled: boolean }[] }) => void;
+  body: RequestBody;
+  onChange: (body: RequestBody) => void;
 }) {
   return (
     <div className="space-y-3">
@@ -332,7 +332,7 @@ function BodyEditor({
 
       {(body.type === "form-data" || body.type === "urlencoded") && (
         <KeyValueEditor
-          pairs={body.formData.length > 0 ? body.formData : [{ key: "", value: "", enabled: true }]}
+          pairs={body.formData.length > 0 ? body.formData : [{ id: `kv_formdata_${Date.now()}`, key: "", value: "", enabled: true }]}
           onChange={(formData) => onChange({ ...body, formData })}
           keyPlaceholder="Field"
           valuePlaceholder="Value"

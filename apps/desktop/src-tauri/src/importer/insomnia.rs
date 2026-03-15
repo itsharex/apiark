@@ -168,6 +168,7 @@ fn parse_request(res: &Value, name: &str, warnings: &mut Vec<ImportWarning>) -> 
         method,
         url,
         headers,
+        params: None,
         body: Box::new(body),
         auth: Box::new(auth),
         description,

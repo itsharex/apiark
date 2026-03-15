@@ -21,6 +21,7 @@ export type BodyType =
 // ── Key-Value Pair ──
 
 export interface KeyValuePair {
+  id: string;
   key: string;
   value: string;
   enabled: boolean;

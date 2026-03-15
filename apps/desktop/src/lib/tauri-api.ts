@@ -242,6 +242,13 @@ export async function loadRootDotenv(
   });
 }
 
+export async function saveEnvironment(
+  collectionPath: string,
+  env: EnvironmentData,
+): Promise<void> {
+  await invoke<void>("save_environment", { collectionPath, env });
+}
+
 // ── History ──
 
 export async function getHistory(): Promise<HistoryEntry[]> {
@@ -526,6 +533,10 @@ export async function unwatchCollection(collectionPath: string): Promise<void> {
 
 export async function createSampleCollection(): Promise<string> {
   return await invoke<string>("create_sample_collection", {});
+}
+
+export async function createCollection(parentDir: string, name: string): Promise<string> {
+  return await invoke<string>("create_collection", { parentDir, name });
 }
 
 // ── Settings ──

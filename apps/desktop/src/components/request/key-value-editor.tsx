@@ -1,6 +1,9 @@
 import type { KeyValuePair } from "@apiark/types";
 import { Plus, Trash2 } from "lucide-react";
 
+let kvCounter = 0;
+const kvId = () => `kv_${Date.now()}_${++kvCounter}`;
+
 interface KeyValueEditorProps {
   pairs: KeyValuePair[];
   onChange: (pairs: KeyValuePair[]) => void;
@@ -22,12 +25,12 @@ export function KeyValueEditor({
   };
 
   const addRow = () => {
-    onChange([...pairs, { key: "", value: "", enabled: true }]);
+    onChange([...pairs, { id: kvId(), key: "", value: "", enabled: true }]);
   };
 
   const removeRow = (index: number) => {
     if (pairs.length <= 1) {
-      onChange([{ key: "", value: "", enabled: true }]);
+      onChange([{ id: kvId(), key: "", value: "", enabled: true }]);
       return;
     }
     onChange(pairs.filter((_, i) => i !== index));
@@ -46,7 +49,7 @@ export function KeyValueEditor({
       {/* Rows */}
       {pairs.map((pair, index) => (
         <div
-          key={index}
+          key={pair.id}
           className="grid grid-cols-[auto_1fr_1fr_auto] items-center gap-2 px-1"
         >
           <input

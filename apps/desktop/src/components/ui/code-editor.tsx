@@ -3,12 +3,10 @@ import Editor, { type OnMount, loader } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
 import { useResolvedTheme } from "@/hooks/use-theme";
 
-// Configure Monaco to use local bundled files (not CDN) for Tauri offline support
-loader.config({
-  paths: {
-    vs: "/node_modules/monaco-editor/min/vs",
-  },
-});
+// Configure Monaco to use the local monaco-editor package instead of fetching from CDN.
+// The vite-plugin-monaco-editor handles bundling workers automatically.
+import * as monacoEditor from "monaco-editor";
+loader.config({ monaco: monacoEditor });
 
 // ApiArk light theme
 const APIARK_LIGHT: Monaco.editor.IStandaloneThemeData = {
@@ -86,6 +84,7 @@ const APIARK_BLACK: Monaco.editor.IStandaloneThemeData = {
 };
 
 let themesRegistered = false;
+let graphqlRegistered = false;
 
 function registerThemes(monaco: typeof Monaco) {
   if (themesRegistered) return;
@@ -94,6 +93,59 @@ function registerThemes(monaco: typeof Monaco) {
   monaco.editor.defineTheme("apiark-black", APIARK_BLACK);
   themesRegistered = true;
 }
+
+function registerGraphQL(monaco: typeof Monaco) {
+  if (graphqlRegistered) return;
+  graphqlRegistered = true;
+
+  monaco.languages.register({ id: "graphql" });
+  monaco.languages.setMonarchTokensProvider("graphql", {
+    keywords: [
+      "query", "mutation", "subscription", "fragment", "on", "type", "input",
+      "enum", "scalar", "interface", "union", "extend", "schema", "directive",
+      "implements", "true", "false", "null",
+    ],
+    typeKeywords: ["Int", "Float", "String", "Boolean", "ID"],
+    operators: ["=", "!", "...", ":", "@", "|", "&"],
+    symbols: /[=!:@|&]+/,
+    escapes: /\\(?:["\\/bfnrt]|u[0-9A-Fa-f]{4})/,
+    tokenizer: {
+      root: [
+        [/#.*$/, "comment"],
+        [/"([^"\\]|\\.)*$/, "string.invalid"],
+        [/"/, { token: "string.quote", bracket: "@open", next: "@string" }],
+        [/\d+/, "number"],
+        [/\$\w+/, "variable"],
+        [/[a-zA-Z_]\w*/, {
+          cases: {
+            "@keywords": "keyword",
+            "@typeKeywords": "type",
+            "@default": "identifier",
+          },
+        }],
+        [/[{}()\[\]]/, "@brackets"],
+        [/@symbols/, {
+          cases: {
+            "@operators": "operator",
+            "@default": "",
+          },
+        }],
+        { include: "@whitespace" },
+      ],
+      string: [
+        [/[^\\"]+/, "string"],
+        [/@escapes/, "string.escape"],
+        [/"/, { token: "string.quote", bracket: "@close", next: "@pop" }],
+      ],
+      whitespace: [
+        [/[ \t\r\n]+/, "white"],
+      ],
+    },
+  });
+}
+
+// Pre-register GraphQL language since Monaco doesn't include it by default.
+registerGraphQL(monacoEditor);
 
 function getMonacoTheme(resolved: "light" | "dark" | "black"): string {
   switch (resolved) {
@@ -132,6 +184,7 @@ export function CodeEditor({
   const handleMount: OnMount = useCallback((editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
+    registerGraphQL(monaco);
     registerThemes(monaco);
     monaco.editor.setTheme(monacoTheme);
   }, [monacoTheme]);

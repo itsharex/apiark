@@ -37,6 +37,7 @@ import { AiAssistantDialog } from "@/components/ai/ai-assistant-dialog";
 import { useShortcutsStore } from "@/stores/shortcuts-store";
 import { AlertCircle, X, RefreshCw, FileX, GitMerge, Shield, ArrowRightLeft, Download, ExternalLink } from "lucide-react";
 import { ToastContainer } from "@/components/ui/toast-container";
+import { SaveAsDialog } from "@/components/request/save-as-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useResponsive } from "@/hooks/use-responsive";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
@@ -59,6 +60,7 @@ function App() {
   const [runnerOpen, setRunnerOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [activeView, setActiveView] = useState<ActivityView>("collections");
   const [sidePanelVisible, setSidePanelVisible] = useState(true);
   const [zenMode, setZenMode] = useState(false);
@@ -157,7 +159,11 @@ function App() {
           if (activeTab) closeTab(activeTab.id);
           break;
         case "save":
-          save();
+          if (activeTab && !activeTab.filePath) {
+            setSaveAsOpen(true);
+          } else {
+            save();
+          }
           break;
         case "send":
           send();
@@ -297,6 +303,7 @@ function App() {
               }
               useDocsStore.getState().openDocs(collections[0].path, collections[0].name);
             }}
+            onOpenImport={() => setImportOpen(true)}
           />
         )}
 
@@ -336,6 +343,35 @@ function App() {
         </div>
       )}
 
+      <SaveAsDialog
+        open={saveAsOpen}
+        onOpenChange={setSaveAsOpen}
+        defaultName={activeTab?.name === "Untitled Request" ? "" : activeTab?.name ?? ""}
+        onSave={async (collectionPath, dir, filename, name) => {
+          try {
+            const { createRequest } = useCollectionStore.getState();
+            const filePath = await createRequest(dir, filename, name, collectionPath);
+            // Update the active tab with the new file path and save
+            const tabStore = useTabStore.getState();
+            const tabId = tabStore.activeTabId;
+            if (tabId) {
+              useTabStore.setState((state) => ({
+                tabs: state.tabs.map((t) =>
+                  t.id === tabId
+                    ? { ...t, filePath, collectionPath, name, isDirty: true }
+                    : t,
+                ),
+              }));
+              // Now save the actual content
+              await tabStore.save();
+            }
+          } catch (err) {
+            import("@/stores/toast-store").then(({ useToastStore }) =>
+              useToastStore.getState().showError(`Failed to save: ${String(err)}`),
+            );
+          }
+        }}
+      />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       <CurlImportDialog open={curlImportOpen} onOpenChange={setCurlImportOpen} />
       <CommandPalette
@@ -747,37 +783,39 @@ function CrashReportBanner() {
 function ConflictBanner({ tabId, conflictState }: { tabId: string; conflictState: "external-change" | "deleted" | "merge-conflict" }) {
   const { reloadFromDisk, dismissConflict, closeTab } = useTabStore();
 
+  const bannerButton = "rounded-md px-3 py-1 text-xs font-medium transition-colors";
+
   if (conflictState === "merge-conflict") {
     return (
-      <div className="flex items-center gap-2 bg-[var(--color-warning)]/10 px-4 py-2 text-sm text-[var(--color-warning)]">
-        <GitMerge className="h-4 w-4 shrink-0" />
+      <div className="flex items-center gap-3 border-b-2 border-[var(--color-warning)] bg-[var(--color-warning)]/15 px-4 py-3 text-sm font-medium text-[var(--color-warning)]">
+        <GitMerge className="h-5 w-5 shrink-0" />
         <span className="flex-1">
           This file has Git merge conflicts. Please resolve them in your editor or Git tool, then reload.
         </span>
-        <button onClick={() => reloadFromDisk(tabId)} className="rounded-md bg-[var(--color-warning)]/20 px-2 py-0.5 text-xs hover:bg-[var(--color-warning)]/30">Reload</button>
-        <button onClick={() => closeTab(tabId)} className="rounded-md bg-[var(--color-warning)]/20 px-2 py-0.5 text-xs hover:bg-[var(--color-warning)]/30">Close</button>
+        <button onClick={() => reloadFromDisk(tabId)} className={`${bannerButton} bg-[var(--color-warning)]/20 hover:bg-[var(--color-warning)]/30`}>Reload</button>
+        <button onClick={() => closeTab(tabId)} className={`${bannerButton} bg-[var(--color-warning)]/20 hover:bg-[var(--color-warning)]/30`}>Close</button>
       </div>
     );
   }
 
   if (conflictState === "deleted") {
     return (
-      <div className="flex items-center gap-2 bg-[var(--color-warning)]/10 px-4 py-2 text-sm text-[var(--color-warning)]">
-        <FileX className="h-4 w-4 shrink-0" />
+      <div className="flex items-center gap-3 border-b-2 border-[var(--color-error)] bg-[var(--color-error)]/15 px-4 py-3 text-sm font-medium text-[var(--color-error)]">
+        <FileX className="h-5 w-5 shrink-0" />
         <span className="flex-1">This file was deleted externally.</span>
-        <button onClick={() => closeTab(tabId)} className="rounded-md bg-[var(--color-warning)]/20 px-2 py-0.5 text-xs hover:bg-[var(--color-warning)]/30">Close</button>
-        <button onClick={() => dismissConflict(tabId)} className="rounded p-0.5 hover:bg-[var(--color-warning)]/20"><X className="h-3.5 w-3.5" /></button>
+        <button onClick={() => closeTab(tabId)} className={`${bannerButton} bg-[var(--color-error)]/20 hover:bg-[var(--color-error)]/30`}>Close</button>
+        <button onClick={() => dismissConflict(tabId)} className="rounded p-1 hover:bg-[var(--color-error)]/20"><X className="h-4 w-4" /></button>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-2 bg-[var(--color-accent)]/10 px-4 py-2 text-sm text-[var(--color-accent)]">
-      <RefreshCw className="h-4 w-4 shrink-0" />
+    <div className="flex items-center gap-3 border-b-2 border-[var(--color-accent)] bg-[var(--color-accent)]/15 px-4 py-3 text-sm font-medium text-[var(--color-accent)]">
+      <RefreshCw className="h-5 w-5 shrink-0" />
       <span className="flex-1">This file was changed externally.</span>
-      <button onClick={() => reloadFromDisk(tabId)} className="rounded-md bg-[var(--color-accent)]/20 px-2 py-0.5 text-xs hover:bg-[var(--color-accent)]/30">Reload</button>
-      <button onClick={() => dismissConflict(tabId)} className="rounded-md bg-[var(--color-accent)]/20 px-2 py-0.5 text-xs hover:bg-[var(--color-accent)]/30">Keep Mine</button>
-      <button onClick={() => dismissConflict(tabId)} className="rounded p-0.5 hover:bg-[var(--color-accent)]/20"><X className="h-3.5 w-3.5" /></button>
+      <button onClick={() => reloadFromDisk(tabId)} className={`${bannerButton} bg-[var(--color-accent)]/20 hover:bg-[var(--color-accent)]/30`}>Reload</button>
+      <button onClick={() => dismissConflict(tabId)} className={`${bannerButton} bg-[var(--color-accent)]/20 hover:bg-[var(--color-accent)]/30`}>Keep Mine</button>
+      <button onClick={() => dismissConflict(tabId)} className="rounded p-1 hover:bg-[var(--color-accent)]/20"><X className="h-4 w-4" /></button>
     </div>
   );
 }

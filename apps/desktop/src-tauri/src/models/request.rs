@@ -46,10 +46,23 @@ pub enum BodyType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyValuePair {
+    #[serde(default)]
+    pub id: String,
     pub key: String,
     pub value: String,
     #[serde(default = "default_true")]
     pub enabled: bool,
+}
+
+impl KeyValuePair {
+    pub fn new(key: String, value: String, enabled: bool) -> Self {
+        Self {
+            id: String::new(),
+            key,
+            value,
+            enabled,
+        }
+    }
 }
 
 fn default_true() -> bool {
