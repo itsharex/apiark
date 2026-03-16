@@ -104,39 +104,39 @@ Payload: {"temp": 20.1, "unit": "C"}`,
   },
 ];
 
-function MiniAppWindow({ protocol }: { protocol: typeof protocols[0] }) {
+function MiniAppWindow({ protocol }: { protocol: (typeof protocols)[0] }) {
   return (
-    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+    <div className="rounded-xl border border-white/[0.06] bg-[var(--color-surface)] overflow-hidden">
       {/* Title bar */}
-      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-bg)] border-b border-[var(--color-border)]">
-        <div className="w-2 h-2 rounded-full bg-[#ef4444]" />
-        <div className="w-2 h-2 rounded-full bg-[#eab308]" />
-        <div className="w-2 h-2 rounded-full bg-[#22c55e]" />
-        <span className="ml-2 text-[9px] text-zinc-600">ApiArk</span>
+      <div className="flex items-center gap-1.5 px-3.5 py-2 bg-[var(--color-bg)] border-b border-white/[0.06]">
+        <div className="w-2.5 h-2.5 rounded-full bg-[#ef4444]/80" />
+        <div className="w-2.5 h-2.5 rounded-full bg-[#eab308]/80" />
+        <div className="w-2.5 h-2.5 rounded-full bg-[#22c55e]/80" />
+        <span className="ml-2 text-[10px] text-zinc-600 font-mono">ApiArk</span>
       </div>
 
       {/* URL bar */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border)]">
+      <div className="flex items-center gap-2.5 px-3.5 py-2 border-b border-white/[0.06]">
         <span
-          className="text-[9px] font-bold px-1.5 py-0.5 rounded"
-          style={{ color: protocol.color, background: `${protocol.color}15` }}
+          className="text-[10px] font-bold px-2 py-0.5 rounded font-mono"
+          style={{ color: protocol.color, background: `${protocol.color}12` }}
         >
           {protocol.method}
         </span>
-        <span className="text-[10px] text-zinc-500 font-mono truncate">{protocol.url}</span>
-        <div className="ml-auto flex items-center gap-1.5">
-          <span className="text-[9px] font-bold" style={{ color: "#22c55e" }}>
+        <span className="text-[11px] text-zinc-500 font-mono truncate">{protocol.url}</span>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-[10px] font-semibold" style={{ color: "#22c55e" }}>
             {protocol.status}
           </span>
-          <span className="text-[9px] text-zinc-600">{protocol.time}</span>
+          <span className="text-[10px] text-zinc-600 font-mono">{protocol.time}</span>
         </div>
       </div>
 
       {/* Response */}
-      <div className="p-3 font-mono text-[9px] leading-relaxed text-zinc-400 h-36 overflow-hidden">
+      <div className="p-3.5 font-mono text-[10px] leading-relaxed text-zinc-400 h-40 overflow-hidden">
         {protocol.response.split("\n").map((line, i) => (
           <div key={i}>
-            <span className="text-zinc-700 select-none mr-2">{i + 1}</span>
+            <span className="text-zinc-700 select-none mr-3 inline-block w-4 text-right">{i + 1}</span>
             <span
               dangerouslySetInnerHTML={{
                 __html: line
@@ -161,46 +161,48 @@ export function Protocols() {
   const [active, setActive] = useState(0);
 
   return (
-    <section ref={ref} id="protocols" className="relative py-32 overflow-hidden">
+    <section ref={ref} id="protocols" className="relative py-24 sm:py-32 overflow-hidden">
       <div className="mx-auto max-w-6xl px-6">
+        {/* Section heading */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.4 }}
+          className="mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
+          <p className="section-label mb-4">_protocols</p>
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">
             Every protocol. <span className="text-indigo-400">One interface.</span>
           </h2>
-          <p className="text-lg text-zinc-500 max-w-xl mx-auto">
+          <p className="text-base text-zinc-500 max-w-xl">
             REST, GraphQL, gRPC, WebSocket, SSE, MQTT &mdash; all with the same experience.
           </p>
         </motion.div>
 
         <div className="grid lg:grid-cols-2 gap-8 items-start">
           {/* Left: Protocol list */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {protocols.map((proto, i) => (
               <motion.button
                 key={proto.name}
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: -12 }}
                 animate={inView ? { opacity: 1, x: 0 } : {}}
-                transition={{ delay: i * 0.06, duration: 0.4 }}
+                transition={{ delay: i * 0.05, duration: 0.35 }}
                 onClick={() => setActive(i)}
-                className={`w-full text-left p-4 rounded-xl border transition-all ${
+                className={`w-full text-left p-4 rounded-lg border transition-all duration-200 ${
                   i === active
-                    ? "bg-white/[0.03] border-white/10"
+                    ? "bg-white/[0.03] border-white/[0.08]"
                     : "bg-transparent border-transparent hover:bg-white/[0.02]"
                 }`}
               >
                 <div className="flex items-center gap-3 mb-1">
                   <span
-                    className="text-xs font-bold px-2 py-0.5 rounded"
-                    style={{ color: proto.color, background: `${proto.color}15` }}
+                    className="text-[10px] font-bold px-2 py-0.5 rounded font-mono"
+                    style={{ color: proto.color, background: `${proto.color}12` }}
                   >
                     {proto.method}
                   </span>
-                  <span className={`font-medium ${i === active ? "text-white" : "text-zinc-400"}`}>
+                  <span className={`text-sm font-medium ${i === active ? "text-white" : "text-zinc-400"}`}>
                     {proto.name}
                   </span>
                   <span className="ml-auto text-[10px] text-zinc-600 font-mono">{proto.url}</span>
@@ -209,6 +211,7 @@ export function Protocols() {
                   <motion.p
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
+                    transition={{ duration: 0.2 }}
                     className="text-sm text-zinc-500 mt-2 leading-relaxed"
                   >
                     {proto.description}
@@ -220,9 +223,9 @@ export function Protocols() {
 
           {/* Right: Mini app window */}
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, x: 16 }}
             animate={inView ? { opacity: 1, x: 0 } : {}}
-            transition={{ delay: 0.2, duration: 0.5 }}
+            transition={{ delay: 0.15, duration: 0.4 }}
             className="sticky top-32"
           >
             <MiniAppWindow protocol={protocols[active]} />

@@ -5,14 +5,21 @@ import { Download, Github } from "lucide-react";
 import { AppMockup } from "./app-mockup";
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 12 },
   visible: { opacity: 1, y: 0 },
 };
 
 const stagger = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
+  visible: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
 };
+
+const badges = [
+  { label: "v0.2.28", color: "text-indigo-400 border-indigo-500/20 bg-indigo-500/[0.06]" },
+  { label: "Open Source", color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/[0.06]" },
+  { label: "MIT License", color: "text-amber-400 border-amber-500/20 bg-amber-500/[0.06]" },
+  { label: "Cross-Platform", color: "text-violet-400 border-violet-500/20 bg-violet-500/[0.06]" },
+];
 
 export default function Hero() {
   return (
@@ -23,21 +30,22 @@ export default function Hero() {
         animate="visible"
         className="mx-auto max-w-6xl px-6"
       >
-        {/* Badge */}
-        <motion.div variants={fadeUp} className="flex justify-center mb-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.06] bg-white/[0.02] px-4 py-1.5 text-sm">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+        {/* Badges row */}
+        <motion.div variants={fadeUp} className="flex flex-wrap justify-center gap-2.5 mb-10">
+          {badges.map((badge) => (
+            <span
+              key={badge.label}
+              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium font-mono ${badge.color}`}
+            >
+              {badge.label}
             </span>
-            <span className="text-zinc-400">Open Source &mdash; Free Core</span>
-          </div>
+          ))}
         </motion.div>
 
         {/* Headline */}
         <motion.h1
           variants={fadeUp}
-          className="text-center text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-6"
+          className="text-center text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.08] tracking-tight mb-6"
         >
           The API Platform That
           <br />
@@ -56,8 +64,8 @@ export default function Hero() {
           <span className="text-zinc-300">No login. No cloud. No bloat.</span>
         </motion.p>
 
-        {/* Stats */}
-        <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center gap-6 mb-8 text-sm text-zinc-500">
+        {/* Stats dots */}
+        <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center gap-6 mb-10 text-sm text-zinc-500">
           {[
             { label: "~50MB RAM", color: "#fbbf24" },
             { label: "<2s Startup", color: "#22d3ee" },
@@ -72,10 +80,10 @@ export default function Hero() {
         </motion.div>
 
         {/* CTAs */}
-        <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center gap-4 mb-4">
+        <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center gap-3 mb-4">
           <a
             href="/download"
-            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-7 py-3 text-sm font-semibold text-white transition-all hover:bg-indigo-500"
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-7 py-3 text-sm font-semibold text-white transition-all hover:bg-indigo-500 shadow-lg shadow-indigo-600/20"
           >
             <Download className="w-4 h-4" />
             Download
@@ -84,7 +92,7 @@ export default function Hero() {
             href="https://github.com/berbicanes/apiark"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-7 py-3 text-sm font-medium text-zinc-300 transition-all hover:bg-white/[0.06]"
+            className="inline-flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-7 py-3 text-sm font-medium text-zinc-400 transition-all hover:bg-white/[0.05] hover:text-zinc-200"
           >
             <Github className="w-4 h-4" />
             View on GitHub
@@ -96,9 +104,9 @@ export default function Hero() {
 
         {/* App Mockup */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.4, ease: [0.22, 1, 0.36, 1] as const }}
+          transition={{ duration: 0.6, delay: 0.35, ease: [0.22, 1, 0.36, 1] as const }}
         >
           <AppMockup autoPlay className="mx-auto max-w-5xl" />
         </motion.div>

@@ -13,29 +13,29 @@ function CellIcon({ value }: { value: CellValue }) {
   switch (value.type) {
     case "yes":
       return (
-        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/15">
-          <Check className="w-4 h-4 text-emerald-400" />
+        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/10">
+          <Check className="w-3 h-3 text-emerald-400" />
         </span>
       );
     case "no":
       return (
-        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-500/15">
-          <X className="w-4 h-4 text-red-400" />
+        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500/10">
+          <X className="w-3 h-3 text-red-400" />
         </span>
       );
     case "partial":
       return (
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/15">
-            <Minus className="w-4 h-4 text-amber-400" />
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/10">
+            <Minus className="w-3 h-3 text-amber-400" />
           </span>
           {value.label && (
-            <span className="text-xs text-amber-400/80">{value.label}</span>
+            <span className="text-[11px] text-amber-400/70">{value.label}</span>
           )}
         </span>
       );
     case "text":
-      return <span className="text-sm text-zinc-300">{value.label}</span>;
+      return <span className="text-[13px] text-zinc-400">{value.label}</span>;
   }
 }
 
@@ -212,57 +212,51 @@ const detailedLinks = [
 export default function ComparisonTable() {
   return (
     <section id="compare" className="relative py-24 sm:py-32">
-      {/* Background glow */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-indigo-500/[0.04] rounded-full blur-[120px]" />
-      </div>
-
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.4 }}
+          className="mb-16"
         >
-          <h2 className="text-4xl sm:text-5xl font-bold tracking-tight">
-            <span className="bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
-              See how we compare.
-            </span>
+          <p className="section-label mb-4">_compare</p>
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            See how we compare.
           </h2>
-          <p className="mt-4 text-lg text-zinc-400 max-w-2xl mx-auto">
+          <p className="mt-3 text-base text-zinc-500 max-w-xl">
             Every feature. Every competitor. No asterisks.
           </p>
         </motion.div>
 
         {/* Table */}
         <motion.div
-          initial={{ opacity: 0, y: 32 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.7, delay: 0.15 }}
-          className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm overflow-hidden"
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="relative rounded-xl border border-white/[0.06] bg-white/[0.01] overflow-hidden"
         >
           <div className="overflow-x-auto">
             <table className="w-full text-left min-w-[760px]">
               <thead>
                 <tr className="border-b border-white/[0.06]">
-                  <th className="sticky left-0 z-20 bg-[var(--color-surface)] px-5 py-4 text-sm font-medium text-zinc-400 w-44 min-w-[176px]">
+                  <th className="sticky left-0 z-20 bg-[#0d0d0f] px-5 py-3.5 text-[13px] font-medium text-zinc-500 w-44 min-w-[176px]">
                     Feature
                   </th>
                   {competitors.map((key) => (
                     <th
                       key={key}
-                      className={`px-5 py-4 text-sm font-semibold text-center min-w-[120px] ${
+                      className={`px-5 py-3.5 text-[13px] font-semibold text-center min-w-[120px] ${
                         key === "apiark"
-                          ? "bg-indigo-500/[0.08] text-indigo-300"
-                          : "text-zinc-300"
+                          ? "bg-indigo-500/[0.06] text-indigo-300"
+                          : "text-zinc-400"
                       }`}
                     >
                       {key === "apiark" && (
-                        <span className="block text-[10px] uppercase tracking-widest text-indigo-400 mb-1 font-medium">
-                          Our pick
+                        <span className="block text-[9px] uppercase tracking-widest text-indigo-400/70 mb-0.5 font-mono">
+                          ours
                         </span>
                       )}
                       {competitorLabels[key]}
@@ -274,17 +268,16 @@ export default function ComparisonTable() {
                 {rows.map((row, i) => (
                   <tr
                     key={row.feature}
-                    className={`border-b border-white/[0.04] transition-colors hover:bg-white/[0.02] ${
-                      i % 2 === 0 ? "bg-transparent" : "bg-white/[0.01]"
+                    className={`border-b border-white/[0.03] transition-colors hover:bg-white/[0.02] ${
+                      i % 2 === 0 ? "bg-transparent" : "bg-white/[0.008]"
                     }`}
                   >
-                    <td className="sticky left-0 z-10 bg-[var(--color-surface)] px-5 py-3.5 text-sm font-medium text-zinc-300 w-44 min-w-[176px]">
+                    <td className="sticky left-0 z-10 bg-[#0d0d0f] px-5 py-3 text-[13px] font-medium text-zinc-400 w-44 min-w-[176px]">
                       <span className="relative">
                         {row.feature}
-                        {/* Match the alternating row bg on the sticky cell */}
                         <span
-                          className={`absolute inset-0 -z-10 -mx-5 -my-3.5 px-5 py-3.5 ${
-                            i % 2 !== 0 ? "bg-white/[0.01]" : ""
+                          className={`absolute inset-0 -z-10 -mx-5 -my-3 px-5 py-3 ${
+                            i % 2 !== 0 ? "bg-white/[0.008]" : ""
                           }`}
                         />
                       </span>
@@ -292,8 +285,8 @@ export default function ComparisonTable() {
                     {competitors.map((key) => (
                       <td
                         key={key}
-                        className={`px-5 py-3.5 text-center ${
-                          key === "apiark" ? "bg-indigo-500/[0.06]" : ""
+                        className={`px-5 py-3 text-center ${
+                          key === "apiark" ? "bg-indigo-500/[0.04]" : ""
                         }`}
                       >
                         <span className="inline-flex justify-center">
@@ -313,20 +306,20 @@ export default function ComparisonTable() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-8 text-center"
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="mt-6 text-center"
         >
-          <span className="text-sm text-zinc-500">Detailed comparison: </span>
+          <span className="text-sm text-zinc-600 font-mono">_detailed: </span>
           {detailedLinks.map((link, i) => (
             <span key={link.name}>
               <a
                 href={link.href}
-                className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors underline underline-offset-4 decoration-indigo-400/30 hover:decoration-indigo-300/50"
+                className="text-sm text-indigo-400/80 hover:text-indigo-300 transition-colors"
               >
                 {link.name}
               </a>
               {i < detailedLinks.length - 1 && (
-                <span className="text-zinc-600 mx-2">|</span>
+                <span className="text-zinc-700 mx-2">/</span>
               )}
             </span>
           ))}

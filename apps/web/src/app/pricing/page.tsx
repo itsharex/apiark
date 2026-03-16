@@ -2,135 +2,78 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronDown, Download, Wrench, Building2 } from "lucide-react";
+import { Check, ChevronDown, Download } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 
-/* ------------------------------------------------------------------ */
-/*  Metadata (exported from a separate file or layout for App Router)  */
-/* ------------------------------------------------------------------ */
-
-const tiers = [
-  {
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    description: "Everything you need to build APIs",
-    cta: "Download",
-    ctaHref: "/download",
-    highlighted: false,
-    badge: null,
-    icon: Download,
-    features: [
-      "Unlimited collections & environments",
-      "Full scripting engine (JS/TS)",
-      "REST, GraphQL, gRPC, WebSocket, SSE, MQTT",
-      "Import from Postman, Bruno, Insomnia, OpenAPI",
-      "Export to Postman, OpenAPI, cURL, HAR",
-      "CLI tool (apiark run, import, export)",
-      "Request history & search",
-      "OAuth 2.0, Digest, AWS Sig v4, NTLM, JWT",
-      "Collection runner with data-driven testing",
-      "Cookie jar management",
-      "Code generation (JS, Python, cURL)",
-    ],
-  },
-  {
-    name: "Pro",
-    price: "$8",
-    period: "/user/month",
-    description: "For power users who want more",
-    cta: "Coming Soon",
-    ctaHref: "#",
-    highlighted: true,
-    badge: "Coming Soon",
-    icon: Wrench,
-    features: [
-      "Everything in Free, plus:",
-      "Mock servers (unlimited, local)",
-      "Scheduled testing & monitors",
-      "API documentation generation",
-      "Response diff viewer",
-      "OpenAPI spec editor with linting",
-      "Parallel collection runner",
-      "Proxy capture mode",
-      "Priority email support",
-    ],
-  },
-  {
-    name: "Team",
-    price: "$16",
-    period: "/user/month",
-    description: "For teams that collaborate",
-    cta: "Coming Soon",
-    ctaHref: "#",
-    highlighted: false,
-    badge: "Coming Soon",
-    icon: Building2,
-    features: [
-      "Everything in Pro, plus:",
-      "Built-in Git UI",
-      "Team environment sharing",
-      "SSO / SAML authentication",
-      "Audit logs",
-      "Priority support with SLA",
-      "Custom onboarding",
-    ],
-  },
+const features = [
+  "Unlimited collections & environments",
+  "Full scripting engine (JS/TS)",
+  "REST, GraphQL, gRPC, WebSocket, SSE, MQTT",
+  "Import from Postman, Bruno, Insomnia, OpenAPI",
+  "Export to Postman, OpenAPI, cURL, HAR",
+  "CLI tool (apiark run, import, export)",
+  "Request history & search",
+  "OAuth 2.0, Digest, AWS Sig v4, NTLM, JWT",
+  "Collection runner with data-driven testing",
+  "Cookie jar management",
+  "Code generation (JS, Python, cURL)",
+  "Mock servers (unlimited, local)",
+  "Scheduled testing & monitors",
+  "API documentation generation",
+  "Response diff viewer",
+  "OpenAPI spec editor with linting",
+  "Parallel collection runner",
+  "Proxy capture mode",
+  "Built-in Git UI",
+  "Team environment sharing",
+  "SSO / SAML authentication",
+  "Audit logs",
 ];
 
 const faqs = [
   {
-    question: "What's included in the Free tier?",
+    question: "Is ApiArk really free?",
     answer:
-      "The Free tier includes the full HTTP client, all protocols, scripting, CLI, import/export, and more. There are no usage limits and no account required. Core API development features will always be free.",
+      "Yes. Every feature is free with no usage limits, no account required, and no time restrictions. We believe great developer tools should be accessible to everyone.",
   },
   {
-    question: "When will Pro and Team be available?",
+    question: "How do you sustain the project?",
     answer:
-      "Pro and Team tiers are currently in development. Right now, all features are available for free. When paid tiers launch, existing users will keep access to all core features. We'll announce availability on our GitHub and website.",
+      "ApiArk is open source (MIT) and community-driven. We may offer optional support plans or hosted services in the future, but the desktop app and all its features will always be free.",
   },
   {
     question: "Can I use ApiArk offline?",
     answer:
-      "Absolutely. ApiArk is designed to work 100% offline for all core workflows. Collections, environments, scripting, history, mock servers, and the collection runner all work without an internet connection. License validation is offline-first using signed JWT keys -- no phone-home lockout.",
-  },
-  {
-    question: "How does licensing work? Is there DRM?",
-    answer:
-      "No DRM. Your license is a signed JWT stored locally on your machine. It is validated offline against a public key embedded in the binary. An optional online check runs on launch if internet is available, but the license remains valid if the server is unreachable. We believe in making paid tiers genuinely valuable, not in punishing users.",
+      "Absolutely. ApiArk is designed to work 100% offline for all workflows. Collections, environments, scripting, history, mock servers, and the collection runner all work without an internet connection.",
   },
   {
     question: "Can I switch from Postman easily?",
     answer:
-      "Yes -- ApiArk has a built-in Postman importer. Export your Postman collection as JSON, then import it into ApiArk. Collections, environments, headers, auth, scripts, and tests are all converted. The entire process takes less than 60 seconds.",
+      "Yes — ApiArk has a built-in Postman importer. Export your Postman collection as JSON, then import it into ApiArk. Collections, environments, headers, auth, scripts, and tests are all converted. The entire process takes less than 60 seconds.",
+  },
+  {
+    question: "Will there ever be paid features?",
+    answer:
+      "We have no plans to gate any features behind a paywall. If we ever introduce paid offerings, they will be for optional hosted services or enterprise support — never for core functionality.",
   },
 ];
 
-/* ------------------------------------------------------------------ */
-/*  Animation variants                                                 */
-/* ------------------------------------------------------------------ */
-
 const fadeUp = {
-  hidden: { opacity: 0, y: 32, filter: "blur(6px)" },
+  hidden: { opacity: 0, y: 24 },
   visible: {
     opacity: 1,
     y: 0,
-    filter: "blur(0px)",
-    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const },
+    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const },
   },
 };
 
 const stagger = {
   hidden: {},
   visible: {
-    transition: { staggerChildren: 0.1, delayChildren: 0.15 },
+    transition: { staggerChildren: 0.08, delayChildren: 0.1 },
   },
 };
-
-/* ------------------------------------------------------------------ */
-/*  FAQ Accordion Item                                                 */
-/* ------------------------------------------------------------------ */
 
 function FaqItem({
   question,
@@ -177,10 +120,6 @@ function FaqItem({
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Page                                                               */
-/* ------------------------------------------------------------------ */
-
 export default function PricingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
@@ -189,12 +128,6 @@ export default function PricingPage() {
       <Navbar />
 
       <main className="relative min-h-screen pt-32 pb-24">
-        {/* Background effects */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-indigo-500/[0.06] rounded-full blur-[140px]" />
-          <div className="absolute bottom-0 left-1/4 w-[600px] h-[400px] bg-violet-500/[0.04] rounded-full blur-[120px]" />
-        </div>
-
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <motion.div
@@ -203,125 +136,90 @@ export default function PricingPage() {
             variants={stagger}
             className="text-center mb-16"
           >
+            <motion.p variants={fadeUp} className="font-mono text-sm text-indigo-400 mb-4">
+              _pricing
+            </motion.p>
             <motion.h1
               variants={fadeUp}
-              className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight"
+              className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white"
             >
-              <span className="text-indigo-400">Simple, fair pricing.</span>
+              Free. Forever. No catches.
             </motion.h1>
             <motion.p
               variants={fadeUp}
-              className="mt-5 text-lg sm:text-xl text-zinc-400 max-w-2xl mx-auto"
+              className="mt-5 text-lg text-zinc-400 max-w-2xl mx-auto"
             >
-              Everything is free right now. Pro and Team tiers are coming soon.
+              Every feature. Every protocol. No account. No limits.
+              Just download and build.
             </motion.p>
           </motion.div>
 
-          {/* Pricing tiers */}
+          {/* Single pricing card */}
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-80px" }}
             variants={stagger}
-            className="grid gap-6 lg:grid-cols-3 lg:gap-8 max-w-5xl mx-auto"
+            className="max-w-2xl mx-auto"
           >
-            {tiers.map((tier) => {
-              const Icon = tier.icon;
-              return (
-                <motion.div
-                  key={tier.name}
-                  variants={fadeUp}
-                  className={`relative flex flex-col rounded-2xl border p-8 transition-all duration-300 ${
-                    tier.cta === "Coming Soon"
-                      ? "border-white/[0.04] bg-white/[0.01] opacity-60"
-                      : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1] hover:bg-white/[0.03]"
-                  }`}
-                >
-                  {tier.badge && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-indigo-600 to-indigo-500 px-4 py-1 text-xs font-semibold text-white shadow-lg shadow-indigo-500/25">
-                      {tier.badge}
-                    </span>
-                  )}
+            <motion.div
+              variants={fadeUp}
+              className="relative rounded-2xl border border-indigo-500/20 bg-white/[0.02] p-8 sm:p-10"
+            >
+              {/* Glow */}
+              <div className="pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-b from-indigo-500/10 to-transparent opacity-50" />
 
-                  <div className="mb-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <span
-                        className={`inline-flex items-center justify-center w-10 h-10 rounded-xl ${
-                          tier.highlighted
-                            ? "bg-indigo-500/20"
-                            : "bg-white/[0.06]"
-                        }`}
-                      >
-                        <Icon
-                          className={`w-5 h-5 ${
-                            tier.highlighted
-                              ? "text-indigo-400"
-                              : "text-zinc-400"
-                          }`}
-                        />
-                      </span>
-                      <h3 className="text-xl font-semibold text-white">
-                        {tier.name}
-                      </h3>
-                    </div>
-
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-bold text-white">
-                        {tier.price}
-                      </span>
-                      <span className="text-sm text-zinc-500">
-                        {tier.period}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm text-zinc-400">
-                      {tier.description}
+              <div className="relative">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">ApiArk</h3>
+                    <p className="text-sm text-zinc-400 mt-1">
+                      The complete API development platform
                     </p>
                   </div>
+                  <div className="text-right">
+                    <span className="text-4xl font-bold text-white">$0</span>
+                    <span className="text-sm text-zinc-500 ml-1">forever</span>
+                  </div>
+                </div>
 
-                  <ul className="mb-8 flex-1 space-y-3">
-                    {tier.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-3">
-                        <Check
-                          className={`mt-0.5 h-4 w-4 shrink-0 ${
-                            tier.highlighted
-                              ? "text-indigo-400"
-                              : "text-emerald-400"
-                          }`}
-                        />
-                        <span className="text-sm text-zinc-300">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
+                <div className="grid sm:grid-cols-2 gap-x-8 gap-y-3 mb-8">
+                  {features.map((feature) => (
+                    <div key={feature} className="flex items-start gap-2.5">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                      <span className="text-sm text-zinc-300">{feature}</span>
+                    </div>
+                  ))}
+                </div>
 
-                  {tier.cta === "Coming Soon" ? (
-                    <span className="flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold border border-white/[0.06] bg-white/[0.02] text-zinc-600 cursor-not-allowed">
-                      Coming Soon
-                    </span>
-                  ) : (
-                    <a
-                      href={tier.ctaHref}
-                      className="flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold border border-white/[0.1] bg-white/[0.04] text-zinc-200 hover:bg-white/[0.08] hover:text-white transition-all"
-                    >
-                      {tier.cta}
-                    </a>
-                  )}
-                </motion.div>
-              );
-            })}
+                <a
+                  href="/download"
+                  className="flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Download — It&apos;s Free
+                </a>
+
+                <p className="text-center text-xs text-zinc-600 mt-3">
+                  No account. No credit card. No telemetry.
+                </p>
+              </div>
+            </motion.div>
           </motion.div>
 
           {/* FAQ Section */}
           <motion.div
-            initial={{ opacity: 0, y: 32 }}
+            initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as const }}
+            transition={{ duration: 0.5 }}
             className="mt-32 max-w-2xl mx-auto"
           >
-            <h2 className="text-3xl font-bold tracking-tight text-center mb-12">
-              <span className="bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
-                Frequently asked questions
-              </span>
+            <p className="font-mono text-sm text-indigo-400 mb-3 text-center">
+              _faq
+            </p>
+            <h2 className="text-3xl font-bold tracking-tight text-center mb-12 text-white">
+              Frequently asked questions
             </h2>
 
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-6">
