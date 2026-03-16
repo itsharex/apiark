@@ -368,6 +368,13 @@ export async function importCollection(
   return await invoke<string>("import_collection", { filePath, format, targetDir });
 }
 
+export async function importEnvironment(
+  filePath: string,
+  collectionPath: string,
+): Promise<string> {
+  return await invoke<string>("import_environment", { filePath, collectionPath });
+}
+
 export async function exportCollection(
   collectionPath: string,
   format: ExportFormat,

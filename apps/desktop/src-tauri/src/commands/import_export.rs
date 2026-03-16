@@ -127,6 +127,60 @@ pub fn export_collection(collection_path: &str, format: &str) -> Result<String, 
     }
 }
 
+/// Import a Postman environment JSON file into a collection.
+/// Parses the environment file and saves it as an ApiArk environment YAML.
+#[tauri::command]
+pub fn import_environment(
+    file_path: &str,
+    collection_path: &str,
+) -> Result<String, String> {
+    let content =
+        std::fs::read_to_string(file_path).map_err(|e| format!("Failed to read file: {e}"))?;
+
+    let root: serde_json::Value =
+        serde_json::from_str(&content).map_err(|e| format!("Invalid JSON: {e}"))?;
+
+    let name = root
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Imported Environment")
+        .to_string();
+
+    let values = root
+        .get("values")
+        .and_then(|v| v.as_array())
+        .ok_or("Not a valid Postman environment file: missing 'values' array")?;
+
+    let mut variables = std::collections::HashMap::new();
+    for val in values {
+        let enabled = val
+            .get("enabled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+        if !enabled {
+            continue;
+        }
+        if let Some(key) = val.get("key").and_then(|k| k.as_str()) {
+            let value = val
+                .get("value")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            variables.insert(key.to_string(), value);
+        }
+    }
+
+    let env = crate::models::environment::EnvironmentFile {
+        name: name.clone(),
+        variables,
+        secrets: Vec::new(),
+    };
+
+    crate::storage::environment::save_environment(Path::new(collection_path), &env)?;
+
+    Ok(name)
+}
+
 fn parse_import(file_path: &str, format: &str) -> Result<importer::ImportData, String> {
     match format {
         "postman" => {

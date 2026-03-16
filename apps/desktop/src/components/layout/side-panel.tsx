@@ -436,6 +436,41 @@ function EnvironmentsPanel({
     }
   };
 
+  const handleImportEnv = async () => {
+    if (!collectionPath) return;
+    try {
+      const { open: openDialog } = await import("@tauri-apps/plugin-dialog");
+      const selected = await openDialog({
+        filters: [{ name: "Postman Environment", extensions: ["json"] }],
+        multiple: true,
+      });
+      if (!selected) return;
+      const files = Array.isArray(selected) ? selected : [selected];
+      const { importEnvironment } = await import("@/lib/tauri-api");
+      let imported = 0;
+      for (const file of files) {
+        try {
+          await importEnvironment(file, collectionPath);
+          imported++;
+        } catch (err) {
+          import("@/stores/toast-store").then(({ useToastStore }) =>
+            useToastStore.getState().showWarning(`Skipped ${file.split("/").pop()}: ${err}`),
+          );
+        }
+      }
+      if (imported > 0) {
+        await loadEnvironments(collectionPath);
+        import("@/stores/toast-store").then(({ useToastStore }) =>
+          useToastStore.getState().showSuccess(`Imported ${imported} environment${imported > 1 ? "s" : ""}`),
+        );
+      }
+    } catch (err) {
+      import("@/stores/toast-store").then(({ useToastStore }) =>
+        useToastStore.getState().showError(`Failed to import: ${err}`),
+      );
+    }
+  };
+
   const handleCreateNew = async (name: string) => {
     if (!collectionPath) return;
     const env: EnvironmentData = { name, variables: {}, secrets: [] };
@@ -512,13 +547,22 @@ function EnvironmentsPanel({
           <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-dimmed)]">
             Environments
           </span>
-          <button
-            onClick={() => setNewEnvOpen(true)}
-            className="rounded p-1 text-[var(--color-text-dimmed)] hover:bg-[var(--color-elevated)] hover:text-[var(--color-text-secondary)]"
-            title="New Environment"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={handleImportEnv}
+              className="rounded p-1 text-[var(--color-text-dimmed)] hover:bg-[var(--color-elevated)] hover:text-[var(--color-text-secondary)]"
+              title="Import Environment (Postman JSON)"
+            >
+              <Upload className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setNewEnvOpen(true)}
+              className="rounded p-1 text-[var(--color-text-dimmed)] hover:bg-[var(--color-elevated)] hover:text-[var(--color-text-secondary)]"
+              title="New Environment"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {environments.length === 0 ? (

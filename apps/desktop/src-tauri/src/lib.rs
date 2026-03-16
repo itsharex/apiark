@@ -40,7 +40,7 @@ use commands::history::{
 };
 use commands::http::{read_full_response, send_request, send_request_with_scripts};
 use commands::import_export::{
-    detect_import_format, export_collection, import_collection, import_preview,
+    detect_import_format, export_collection, import_collection, import_environment, import_preview,
 };
 use commands::license::{activate_license, deactivate_license, get_license_status, LicenseState};
 use commands::migration::{check_collection_version, migrate_collection};
@@ -273,6 +273,7 @@ pub fn run() {
             detect_import_format,
             import_preview,
             import_collection,
+            import_environment,
             export_collection,
             // Settings commands
             get_settings,
