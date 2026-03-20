@@ -235,7 +235,12 @@ pub async fn send_request_with_scripts(
 
     // Store response cookies in the jar
     if defaults.store_cookies {
-        store_response_cookies(&cookie_jar, collection_path.as_deref(), &response.cookies, defaults.persist_cookies);
+        store_response_cookies(
+            &cookie_jar,
+            collection_path.as_deref(),
+            &response.cookies,
+            defaults.persist_cookies,
+        );
     }
 
     // Record history
