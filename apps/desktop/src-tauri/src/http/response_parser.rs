@@ -146,8 +146,8 @@ pub fn parse_set_cookie_header(header: &str, url: &url::Url) -> Option<CookieDat
     let value = value.trim().to_string();
 
     let attrs = parts.get(1).unwrap_or(&"").to_lowercase();
-    let domain = extract_cookie_attr(&attrs, "domain")
-        .or_else(|| url.host_str().map(|h| h.to_string()));
+    let domain =
+        extract_cookie_attr(&attrs, "domain").or_else(|| url.host_str().map(|h| h.to_string()));
     let path = extract_cookie_attr(&attrs, "path").or_else(|| Some("/".to_string()));
     let http_only = attrs.contains("httponly");
     let secure = attrs.contains("secure");

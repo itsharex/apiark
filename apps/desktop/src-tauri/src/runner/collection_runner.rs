@@ -253,7 +253,9 @@ async fn run_single_request(
                     if let Some(ref req_domain) = request_domain {
                         let cookie_domain = cookie.domain.trim_start_matches('.');
                         if req_domain.ends_with(cookie_domain) || req_domain == cookie_domain {
-                            cookies_map.entry(cookie.name.clone()).or_insert_with(|| cookie.value.clone());
+                            cookies_map
+                                .entry(cookie.name.clone())
+                                .or_insert_with(|| cookie.value.clone());
                         }
                     }
                 }
@@ -319,16 +321,20 @@ async fn run_single_request(
 
     // Store response cookies in the jar
     if defaults.store_cookies && !response.cookies.is_empty() {
-        let entries: Vec<CookieEntry> = response.cookies.iter().map(|c| CookieEntry {
-            name: c.name.clone(),
-            value: c.value.clone(),
-            domain: c.domain.clone().unwrap_or_default(),
-            path: c.path.clone().unwrap_or_else(|| "/".to_string()),
-            expires: c.expires.clone(),
-            http_only: c.http_only,
-            secure: c.secure,
-            same_site: None,
-        }).collect();
+        let entries: Vec<CookieEntry> = response
+            .cookies
+            .iter()
+            .map(|c| CookieEntry {
+                name: c.name.clone(),
+                value: c.value.clone(),
+                domain: c.domain.clone().unwrap_or_default(),
+                path: c.path.clone().unwrap_or_else(|| "/".to_string()),
+                expires: c.expires.clone(),
+                http_only: c.http_only,
+                secure: c.secure,
+                same_site: None,
+            })
+            .collect();
         let _ = cookie_jar.store_cookies(collection_path, entries);
         if defaults.persist_cookies {
             let _ = cookie_jar.save_to_disk(collection_path);
@@ -581,7 +587,16 @@ pub async fn run_collection(
                 }
             };
 
-            let result = run_single_request(&file, &mut vars, &history_db, oauth_store, cookie_jar, &config.collection_path, &defaults).await;
+            let result = run_single_request(
+                &file,
+                &mut vars,
+                &history_db,
+                oauth_store,
+                cookie_jar,
+                &config.collection_path,
+                &defaults,
+            )
+            .await;
 
             // Emit progress event
             let _ = app.emit(

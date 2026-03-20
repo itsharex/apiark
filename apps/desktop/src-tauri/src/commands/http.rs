@@ -125,7 +125,12 @@ pub async fn send_request(
     // Store response cookies in the jar
     if defaults.store_cookies {
         if let Ok(ref response) = result {
-            store_response_cookies(&cookie_jar, collection_path.as_deref(), &response.cookies, defaults.persist_cookies);
+            store_response_cookies(
+                &cookie_jar,
+                collection_path.as_deref(),
+                &response.cookies,
+                defaults.persist_cookies,
+            );
         }
     }
 
@@ -665,7 +670,9 @@ fn inject_jar_cookies(
             let cookie_domain = cookie.domain.trim_start_matches('.');
             if req_domain.ends_with(cookie_domain) || req_domain == cookie_domain {
                 // Don't override per-request cookie overrides
-                cookies_map.entry(cookie.name.clone()).or_insert_with(|| cookie.value.clone());
+                cookies_map
+                    .entry(cookie.name.clone())
+                    .or_insert_with(|| cookie.value.clone());
             }
         }
     }
