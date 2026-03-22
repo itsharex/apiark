@@ -10,6 +10,9 @@ import { GraphQLView } from "@/components/graphql/graphql-view";
 import { GrpcView } from "@/components/grpc/grpc-view";
 import { WebSocketView } from "@/components/websocket/websocket-view";
 import { SSEView } from "@/components/sse/sse-view";
+import { MqttView } from "@/components/mqtt/mqtt-view";
+import { SocketIoView } from "@/components/socketio/socketio-view";
+import { ProxyCaptureViewer } from "@/components/proxy/proxy-panel";
 import type { TabProtocol } from "@apiark/types";
 import { useTabStore, useActiveTab, initWindowStateTracker } from "@/stores/tab-store";
 import { useConsoleStore } from "@/stores/console-store";
@@ -323,7 +326,9 @@ function App() {
           {/* Tab Bar */}
           {!zenMode && <TabBar />}
 
-          {activeTab ? (
+          {activeView === "proxy" ? (
+            <ProxyCaptureViewer />
+          ) : activeTab ? (
             <ProtocolView protocol={activeTab.protocol} urlBarRef={urlBarRef} />
           ) : (
             <EmptyState />
@@ -466,6 +471,10 @@ function ProtocolView({
       return <WebSocketView />;
     case "sse":
       return <SSEView />;
+    case "mqtt":
+      return <MqttView />;
+    case "socketio":
+      return <SocketIoView />;
     default:
       return (
         <>

@@ -44,6 +44,8 @@ interface TabState {
   newWebSocketTab: () => void;
   newSSETab: () => void;
   newGrpcTab: () => void;
+  newMqttTab: () => void;
+  newSocketIoTab: () => void;
 
   // GraphQL mutations
   setGraphQLQuery: (query: string) => void;
@@ -522,6 +524,24 @@ export const useTabStore = create<TabState>((set, get) => ({
         loading: false,
         error: null,
       },
+    });
+    set((state) => ({ tabs: [...state.tabs, tab], activeTabId: tab.id }));
+  },
+
+  newMqttTab: () => {
+    const tab = createEmptyTab({
+      name: "Untitled MQTT",
+      protocol: "mqtt",
+      url: "localhost",
+    });
+    set((state) => ({ tabs: [...state.tabs, tab], activeTabId: tab.id }));
+  },
+
+  newSocketIoTab: () => {
+    const tab = createEmptyTab({
+      name: "Untitled Socket.IO",
+      protocol: "socketio",
+      url: "http://localhost:3000",
     });
     set((state) => ({ tabs: [...state.tabs, tab], activeTabId: tab.id }));
   },

@@ -19,6 +19,8 @@ use crate::scripting::{
     AssertionResult, ConsoleEntry, RequestSnapshot, ResponseSnapshot, ScriptContext, ScriptPhase,
     TestResult,
 };
+use crate::plugins::js_plugin::execute_js_hook;
+use crate::plugins::manager::{PluginHook, PluginManager};
 use crate::storage::collection;
 use crate::storage::history::HistoryEntry;
 
@@ -55,6 +57,7 @@ pub async fn send_request(
     state: State<'_, AppState>,
     oauth_store: State<'_, OAuthTokenStore>,
     cookie_jar: State<'_, CookieJarManager>,
+    plugin_manager: State<'_, PluginManager>,
     params: SendRequestParams,
     variables: Option<HashMap<String, String>>,
     collection_path: Option<String>,
@@ -69,6 +72,16 @@ pub async fn send_request(
     if defaults.send_cookies {
         inject_jar_cookies(&mut interpolated, &cookie_jar, collection_path.as_deref());
     }
+
+    // Execute preRequest plugin hooks
+    let mut _plugin_console: Vec<ConsoleEntry> = Vec::new();
+    run_plugin_hooks(
+        &plugin_manager,
+        PluginHook::PreRequest,
+        &mut interpolated,
+        None,
+        &mut _plugin_console,
+    );
 
     tracing::info!(method = ?interpolated.method, url = %interpolated.url, "Sending request");
 
@@ -155,6 +168,7 @@ pub async fn send_request_with_scripts(
     state: State<'_, AppState>,
     oauth_store: State<'_, OAuthTokenStore>,
     cookie_jar: State<'_, CookieJarManager>,
+    plugin_manager: State<'_, PluginManager>,
     params: SendRequestParams,
     variables: Option<HashMap<String, String>>,
     collection_path: Option<String>,
@@ -225,6 +239,15 @@ pub async fn send_request_with_scripts(
         }
     }
 
+    // 1b. Execute preRequest plugin hooks
+    run_plugin_hooks(
+        &plugin_manager,
+        PluginHook::PreRequest,
+        &mut interpolated,
+        None,
+        &mut all_console,
+    );
+
     tracing::info!(method = ?interpolated.method, url = %interpolated.url, "Sending request (scripted)");
 
     // 2. Send the HTTP request
@@ -287,6 +310,15 @@ pub async fn send_request_with_scripts(
             }
         }
     }
+
+    // 3b. Execute postResponse plugin hooks
+    run_plugin_hooks(
+        &plugin_manager,
+        PluginHook::PostResponse,
+        &mut interpolated,
+        Some(&response),
+        &mut all_console,
+    );
 
     // 4. Evaluate declarative assertions (if any)
     let mut assertion_results = Vec::new();
@@ -766,5 +798,89 @@ fn redact_value(value: &mut serde_json::Value, keys: &[&str]) {
             }
         }
         _ => {}
+    }
+}
+
+/// Execute all enabled plugins for a given hook.
+fn run_plugin_hooks(
+    plugin_manager: &PluginManager,
+    hook: PluginHook,
+    params: &mut SendRequestParams,
+    response: Option<&ResponseData>,
+    console: &mut Vec<ConsoleEntry>,
+) {
+    let plugins = plugin_manager.get_plugins_for_hook(hook);
+    if plugins.is_empty() {
+        return;
+    }
+
+    let hook_name = match hook {
+        PluginHook::PreRequest => "preRequest",
+        PluginHook::PostResponse => "postResponse",
+        PluginHook::OnStart => "onStart",
+        PluginHook::OnCollectionOpen => "onCollectionOpen",
+        PluginHook::AuthProvider => "authProvider",
+    };
+
+    // Build context JSON for plugins
+    let context = serde_json::json!({
+        "request": {
+            "method": format!("{:?}", params.method),
+            "url": params.url,
+            "headers": params.headers.iter().map(|h| (&h.key, &h.value)).collect::<HashMap<_, _>>(),
+            "body": params.body.as_ref().map(|b| &b.content),
+        },
+        "response": response.map(|r| serde_json::json!({
+            "status": r.status,
+            "statusText": r.status_text,
+            "body": r.body,
+            "timeMs": r.time_ms,
+        })),
+    });
+
+    let context_str = context.to_string();
+
+    for plugin in &plugins {
+        let plugin_dir = std::path::Path::new(&plugin.path);
+        match execute_js_hook(plugin_dir, &plugin.manifest.entry, hook_name, &context_str) {
+            Ok(result) => {
+                // Try to apply mutations from preRequest hooks
+                if hook == PluginHook::PreRequest {
+                    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&result) {
+                        if let Some(req) = parsed.get("request") {
+                            if let Some(url) = req.get("url").and_then(|v| v.as_str()) {
+                                params.url = url.to_string();
+                            }
+                            if let Some(headers) = req.get("headers").and_then(|v| v.as_object()) {
+                                params.headers = headers
+                                    .iter()
+                                    .map(|(k, v)| {
+                                        KeyValuePair::new(
+                                            k.clone(),
+                                            v.as_str().unwrap_or("").to_string(),
+                                            true,
+                                        )
+                                    })
+                                    .collect();
+                            }
+                        }
+                    }
+                }
+
+                console.push(ConsoleEntry {
+                    level: "info".to_string(),
+                    message: format!("[plugin:{}] {} hook executed", plugin.manifest.name, hook_name),
+                });
+            }
+            Err(e) => {
+                console.push(ConsoleEntry {
+                    level: "error".to_string(),
+                    message: format!(
+                        "[plugin:{}] {} hook failed: {}",
+                        plugin.manifest.name, hook_name, e
+                    ),
+                });
+            }
+        }
     }
 }

@@ -12,6 +12,7 @@ import { useSettingsStore } from "@/stores/settings-store";
 import type { EnvironmentData, CollectionNode } from "@apiark/types";
 import * as Dialog from "@radix-ui/react-dialog";
 import type { ActivityView } from "./activity-bar";
+import { ProxySidePanel as ProxySidePanelView } from "@/components/proxy/proxy-panel";
 
 interface SidePanelProps {
   activeView: ActivityView;
@@ -38,6 +39,7 @@ export function SidePanel({
     mock: t("mock.title"),
     monitor: t("monitor.title"),
     docs: t("docs.title"),
+    proxy: "Proxy Capture",
   };
 
   const sidebarWidth = useSettingsStore((s) => s.settings.sidebarWidth);
@@ -62,6 +64,7 @@ export function SidePanel({
         {activeView === "mock" && <ToolPanel description={t("mock.createDesc")} actionLabel={t("mock.newMockServer")} onAction={onOpenMock} />}
         {activeView === "monitor" && <ToolPanel description={t("monitor.createDesc")} actionLabel={t("monitor.newMonitor")} onAction={onOpenMonitor} />}
         {activeView === "docs" && <ToolPanel description={t("docs.generateDesc")} actionLabel={t("docs.generateDocs")} onAction={onOpenDocs} />}
+        {activeView === "proxy" && <ProxySidePanelView />}
       </div>
     </div>
   );

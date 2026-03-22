@@ -9,9 +9,10 @@ import {
   FileText,
   Activity,
   MessageSquare,
+  Shield,
 } from "lucide-react";
 
-export type ActivityView = "collections" | "environments" | "history" | "mock" | "monitor" | "docs";
+export type ActivityView = "collections" | "environments" | "history" | "mock" | "monitor" | "docs" | "proxy";
 
 interface ActivityBarProps {
   activeView: ActivityView;
@@ -31,6 +32,7 @@ const BOTTOM_ITEMS: { id: ActivityView; icon: typeof Server; labelKey: string; c
   { id: "mock", icon: Server, labelKey: "mock.title", color: "text-violet-400", glow: "bg-violet-400/10" },
   { id: "monitor", icon: Activity, labelKey: "monitor.title", color: "text-rose-400", glow: "bg-rose-400/10" },
   { id: "docs", icon: FileText, labelKey: "docs.title", color: "text-cyan-400", glow: "bg-cyan-400/10" },
+  { id: "proxy", icon: Shield, labelKey: "proxy.title", color: "text-indigo-400", glow: "bg-indigo-400/10" },
 ];
 
 export function ActivityBar({
