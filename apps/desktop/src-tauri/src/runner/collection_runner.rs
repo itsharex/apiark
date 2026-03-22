@@ -12,9 +12,7 @@ use crate::models::collection::{CollectionDefaults, CollectionNode, RequestFile}
 use crate::models::request::{BodyType, KeyValuePair, RequestBody, SendRequestParams};
 use crate::oauth::OAuthTokenStore;
 use crate::scripting::engine::execute_script;
-use crate::scripting::{
-    RequestSnapshot, ResponseSnapshot, ScriptContext, ScriptPhase,
-};
+use crate::scripting::{RequestSnapshot, ResponseSnapshot, ScriptContext, ScriptPhase};
 use crate::storage::collection::{load_collection_config, load_collection_tree, read_request};
 use crate::storage::environment;
 use crate::storage::history::HistoryDb;

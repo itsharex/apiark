@@ -36,16 +36,20 @@ export function ResponsePanel() {
   const tab = useActiveTab();
   const [activeTab, setActiveTab] = useState<ResponseTab>("body");
 
-  if (!tab) return null;
+  const testResults = tab?.testResults ?? [];
+  const assertionResults = tab?.assertionResults ?? [];
 
-  const { response, error, loading, testResults, assertionResults, consoleOutput } = tab;
-
-  const hasTestResults = testResults.length > 0 || assertionResults.length > 0;
   const failedCount = useMemo(
-    () => (testResults?.filter((t) => !t.passed).length ?? 0) +
-      (assertionResults?.filter((a) => !a.passed).length ?? 0),
+    () => (testResults.filter((t) => !t.passed).length) +
+      (assertionResults.filter((a) => !a.passed).length),
     [testResults, assertionResults],
   );
+
+  if (!tab) return null;
+
+  const { response, error, loading, consoleOutput } = tab;
+
+  const hasTestResults = testResults.length > 0 || assertionResults.length > 0;
 
   // Loading state — skeleton shimmer
   if (loading) {
