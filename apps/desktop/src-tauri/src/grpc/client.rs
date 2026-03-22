@@ -235,8 +235,7 @@ impl GrpcManager {
 
         let request_msg = json_to_dynamic_message(
             &input_desc,
-            &serde_json::from_str(request_json)
-                .map_err(|e| format!("Invalid JSON: {e}"))?,
+            &serde_json::from_str(request_json).map_err(|e| format!("Invalid JSON: {e}"))?,
         )?;
         let mut request_bytes = Vec::new();
         request_msg
@@ -284,8 +283,7 @@ impl GrpcManager {
                     Ok(bytes) => {
                         match DynamicMessage::decode(output_desc.clone(), bytes.as_slice()) {
                             Ok(msg) => {
-                                let json =
-                                    serde_json::to_string_pretty(&msg).unwrap_or_default();
+                                let json = serde_json::to_string_pretty(&msg).unwrap_or_default();
                                 let _ = app.emit(
                                     &event_name,
                                     serde_json::json!({
@@ -515,32 +513,30 @@ impl GrpcManager {
 
         while let Some(result) = response_stream.next().await {
             match result {
-                Ok(bytes) => {
-                    match DynamicMessage::decode(output_desc.clone(), bytes.as_slice()) {
-                        Ok(msg) => {
-                            let json = serde_json::to_string_pretty(&msg).unwrap_or_default();
-                            let _ = app.emit(
-                                &event_name,
-                                serde_json::json!({
-                                    "type": "message",
-                                    "body": json,
-                                    "index": received_count,
-                                    "timeMs": start.elapsed().as_millis() as u64,
-                                }),
-                            );
-                            received_count += 1;
-                        }
-                        Err(e) => {
-                            let _ = app.emit(
-                                &event_name,
-                                serde_json::json!({
-                                    "type": "error",
-                                    "message": format!("Decode error: {e}"),
-                                }),
-                            );
-                        }
+                Ok(bytes) => match DynamicMessage::decode(output_desc.clone(), bytes.as_slice()) {
+                    Ok(msg) => {
+                        let json = serde_json::to_string_pretty(&msg).unwrap_or_default();
+                        let _ = app.emit(
+                            &event_name,
+                            serde_json::json!({
+                                "type": "message",
+                                "body": json,
+                                "index": received_count,
+                                "timeMs": start.elapsed().as_millis() as u64,
+                            }),
+                        );
+                        received_count += 1;
                     }
-                }
+                    Err(e) => {
+                        let _ = app.emit(
+                            &event_name,
+                            serde_json::json!({
+                                "type": "error",
+                                "message": format!("Decode error: {e}"),
+                            }),
+                        );
+                    }
+                },
                 Err(e) => {
                     let _ = app.emit(
                         &event_name,
@@ -566,12 +562,8 @@ impl GrpcManager {
 
         Ok(GrpcResponse {
             status_code: 0,
-            status_message: format!(
-                "Bidi complete (sent {sent_count}, received {received_count})"
-            ),
-            body: format!(
-                "{{\"sent\": {sent_count}, \"received\": {received_count}}}"
-            ),
+            status_message: format!("Bidi complete (sent {sent_count}, received {received_count})"),
+            body: format!("{{\"sent\": {sent_count}, \"received\": {received_count}}}"),
             time_ms: elapsed_ms,
             metadata: vec![],
         })
@@ -583,16 +575,28 @@ impl GrpcManager {
         connection_id: &str,
         service_name: &str,
         method_name: &str,
-    ) -> Result<(DescriptorPool, prost_reflect::MethodDescriptor, MessageDescriptor), String> {
+    ) -> Result<
+        (
+            DescriptorPool,
+            prost_reflect::MethodDescriptor,
+            MessageDescriptor,
+        ),
+        String,
+    > {
         let pool = {
             let pools = self.pools.lock().map_err(|e| format!("Lock error: {e}"))?;
-            pools.get(connection_id).cloned().ok_or_else(|| {
-                "No proto schema loaded. Load a .proto file first.".to_string()
-            })?
+            pools
+                .get(connection_id)
+                .cloned()
+                .ok_or_else(|| "No proto schema loaded. Load a .proto file first.".to_string())?
         };
-        let svc_desc = pool.services().find(|s| s.full_name() == service_name)
+        let svc_desc = pool
+            .services()
+            .find(|s| s.full_name() == service_name)
             .ok_or_else(|| format!("Service not found: {service_name}"))?;
-        let method_desc = svc_desc.methods().find(|m| m.name() == method_name)
+        let method_desc = svc_desc
+            .methods()
+            .find(|m| m.name() == method_name)
             .ok_or_else(|| format!("Method not found: {method_name}"))?;
         let input_desc = method_desc.input();
         Ok((pool, method_desc, input_desc))
@@ -639,29 +643,19 @@ fn json_to_prost_value(
     match val {
         serde_json::Value::String(s) => Some(prost_reflect::Value::String(s.clone())),
         serde_json::Value::Bool(b) => Some(prost_reflect::Value::Bool(*b)),
-        serde_json::Value::Number(n) => {
-            match field.kind() {
-                Kind::Int32 | Kind::Sint32 | Kind::Sfixed32 => {
-                    n.as_i64().map(|v| prost_reflect::Value::I32(v as i32))
-                }
-                Kind::Int64 | Kind::Sint64 | Kind::Sfixed64 => {
-                    n.as_i64().map(prost_reflect::Value::I64)
-                }
-                Kind::Uint32 | Kind::Fixed32 => {
-                    n.as_u64().map(|v| prost_reflect::Value::U32(v as u32))
-                }
-                Kind::Uint64 | Kind::Fixed64 => {
-                    n.as_u64().map(prost_reflect::Value::U64)
-                }
-                Kind::Float => {
-                    n.as_f64().map(|v| prost_reflect::Value::F32(v as f32))
-                }
-                Kind::Double => {
-                    n.as_f64().map(prost_reflect::Value::F64)
-                }
-                _ => n.as_i64().map(prost_reflect::Value::I64),
+        serde_json::Value::Number(n) => match field.kind() {
+            Kind::Int32 | Kind::Sint32 | Kind::Sfixed32 => {
+                n.as_i64().map(|v| prost_reflect::Value::I32(v as i32))
             }
-        }
+            Kind::Int64 | Kind::Sint64 | Kind::Sfixed64 => {
+                n.as_i64().map(prost_reflect::Value::I64)
+            }
+            Kind::Uint32 | Kind::Fixed32 => n.as_u64().map(|v| prost_reflect::Value::U32(v as u32)),
+            Kind::Uint64 | Kind::Fixed64 => n.as_u64().map(prost_reflect::Value::U64),
+            Kind::Float => n.as_f64().map(|v| prost_reflect::Value::F32(v as f32)),
+            Kind::Double => n.as_f64().map(prost_reflect::Value::F64),
+            _ => n.as_i64().map(prost_reflect::Value::I64),
+        },
         _ => None,
     }
 }

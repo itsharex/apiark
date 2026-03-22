@@ -158,9 +158,7 @@ fn export_auth_bru(auth: &AuthConfig) -> Option<String> {
         AuthConfig::Basic { username, password } => Some(format!(
             "auth:basic {{\n  username: {username}\n  password: {password}\n}}"
         )),
-        AuthConfig::ApiKey { key, value, .. } => {
-            Some(format!("headers {{\n  {key}: {value}\n}}"))
-        }
+        AuthConfig::ApiKey { key, value, .. } => Some(format!("headers {{\n  {key}: {value}\n}}")),
         AuthConfig::None => None,
         _ => None, // Skip unsupported auth types
     }
@@ -168,6 +166,12 @@ fn export_auth_bru(auth: &AuthConfig) -> Option<String> {
 
 fn sanitize_filename(name: &str) -> String {
     name.chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' || c == '.' { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' || c == '.' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect()
 }
