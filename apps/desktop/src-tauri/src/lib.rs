@@ -86,6 +86,15 @@ use websocket::manager::WsManager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Work around WebKitGTK EGL crashes on some Linux systems (e.g. Fedora)
+    // See: https://github.com/nickvdyck/webtop/issues/58, tauri #9304
+    #[cfg(target_os = "linux")]
+    {
+        if std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").is_err() {
+            std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        }
+    }
+
     // Initialize history database
     let apiark_dir = dirs::home_dir()
         .expect("Could not determine home directory")

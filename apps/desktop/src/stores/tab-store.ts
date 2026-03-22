@@ -1119,6 +1119,7 @@ export const useTabStore = create<TabState>((set, get) => ({
 
 // Selectors
 export const useActiveTab = () => {
-  const { tabs, activeTabId } = useTabStore();
-  return tabs.find((t) => t.id === activeTabId) ?? null;
+  return useTabStore((state) =>
+    state.tabs.find((t) => t.id === state.activeTabId) ?? null
+  );
 };

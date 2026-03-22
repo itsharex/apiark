@@ -116,6 +116,12 @@ function SortableTab({
         {...attributes}
         {...listeners}
         onClick={onActivate}
+        onMouseDown={(e) => {
+          if (e.button === 1 && !tab.pinned) {
+            e.preventDefault();
+            onClose();
+          }
+        }}
         onContextMenu={handleContextMenu}
         className={`group relative flex shrink-0 items-center gap-2 rounded-t-lg px-4 py-2 text-[13px] transition-all ${
           isActive

@@ -231,25 +231,27 @@ function PathVariablesEditor({
         </div>
       ))}
 
-      {/* Add row */}
-      <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 px-1">
-        <input
-          type="text"
-          value={newVarName}
-          onChange={(e) => setNewVarName(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-          placeholder={t("request.variableName")}
-          className="rounded bg-[var(--color-elevated)] px-2 py-1 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500"
-        />
-        <div />
-        <button
-          onClick={handleAdd}
-          disabled={!newVarName.trim() || pathVars.includes(newVarName.trim())}
-          className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-text-primary)] disabled:opacity-40"
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </button>
-      </div>
+      {/* Add row — only show when no path vars exist yet or user started typing */}
+      {(pathVars.length === 0 || newVarName) && (
+        <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 px-1">
+          <input
+            type="text"
+            value={newVarName}
+            onChange={(e) => setNewVarName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+            placeholder={t("request.variableName")}
+            className="rounded bg-[var(--color-elevated)] px-2 py-1 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <div />
+          <button
+            onClick={handleAdd}
+            disabled={!newVarName.trim() || pathVars.includes(newVarName.trim())}
+            className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-text-primary)] disabled:opacity-40"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

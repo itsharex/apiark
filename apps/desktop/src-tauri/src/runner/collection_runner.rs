@@ -9,12 +9,11 @@ use crate::http::cookies::{CookieEntry, CookieJarManager};
 use crate::http::interpolation;
 use crate::models::auth::AuthConfig;
 use crate::models::collection::{CollectionDefaults, CollectionNode, RequestFile};
-use crate::models::request::{BodyType, HttpMethod, KeyValuePair, RequestBody, SendRequestParams};
+use crate::models::request::{BodyType, KeyValuePair, RequestBody, SendRequestParams};
 use crate::oauth::OAuthTokenStore;
-use crate::scripting::assertions::evaluate_assertions_from_yaml;
 use crate::scripting::engine::execute_script;
 use crate::scripting::{
-    ConsoleEntry, RequestSnapshot, ResponseSnapshot, ScriptContext, ScriptPhase,
+    RequestSnapshot, ResponseSnapshot, ScriptContext, ScriptPhase,
 };
 use crate::storage::collection::{load_collection_config, load_collection_tree, read_request};
 use crate::storage::environment;

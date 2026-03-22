@@ -4,11 +4,9 @@ use std::time::Instant;
 
 use prost::Message;
 use prost_reflect::{DescriptorPool, DynamicMessage, MessageDescriptor};
-use tauri::{AppHandle, Emitter};
 use tonic::transport::Channel;
-use tonic::IntoRequest;
 
-use super::{GrpcMetadata, GrpcResponse, GrpcStreamMessage};
+use super::{GrpcMetadata, GrpcResponse};
 
 pub struct GrpcManager {
     /// Active channels keyed by address
@@ -78,7 +76,6 @@ impl GrpcManager {
         };
 
         // Find the method descriptor
-        let full_method = format!("{service_name}.{method_name}");
         let svc_desc = pool
             .services()
             .find(|s| s.full_name() == service_name)

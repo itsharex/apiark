@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useActiveTab, useTabStore } from "@/stores/tab-store";
 import { AlertCircle, ClipboardCopy, Download, Check, ArrowLeftRight, BookmarkPlus } from "lucide-react";
@@ -41,8 +41,11 @@ export function ResponsePanel() {
   const { response, error, loading, testResults, assertionResults, consoleOutput } = tab;
 
   const hasTestResults = testResults.length > 0 || assertionResults.length > 0;
-  const failedCount = (testResults?.filter((t) => !t.passed).length ?? 0) +
-    (assertionResults?.filter((a) => !a.passed).length ?? 0);
+  const failedCount = useMemo(
+    () => (testResults?.filter((t) => !t.passed).length ?? 0) +
+      (assertionResults?.filter((a) => !a.passed).length ?? 0),
+    [testResults, assertionResults],
+  );
 
   // Loading state — skeleton shimmer
   if (loading) {

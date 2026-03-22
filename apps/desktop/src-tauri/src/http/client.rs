@@ -37,7 +37,7 @@ impl HttpEngine {
             .map_err(|e| classify_reqwest_error(e, timeout_ms))?;
 
         // Accumulate cookies from all responses in the redirect chain
-        let mut all_cookies: Vec<CookieData> = Vec::new();
+        let mut all_cookies: Vec<CookieData> = Vec::with_capacity(4);
         let mut redirect_count = 0;
 
         // Collect cookies from intermediate redirect responses

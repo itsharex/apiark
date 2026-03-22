@@ -167,6 +167,7 @@ pub async fn deactivate_license(
 }
 
 /// Check if a feature is available for the given tier.
+#[allow(dead_code)]
 pub fn is_feature_available(tier: LicenseTier, feature: &str) -> bool {
     match feature {
         // Pro features
