@@ -14,6 +14,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import type { ActivityView } from "./activity-bar";
 import { ProxySidePanel as ProxySidePanelView } from "@/components/proxy/proxy-panel";
 import { GitPanel as GitPanelView } from "@/components/git/git-panel";
+import { AuditPanel } from "@/components/audit/audit-panel";
 
 interface SidePanelProps {
   activeView: ActivityView;
@@ -42,6 +43,7 @@ export function SidePanel({
     docs: t("docs.title"),
     proxy: "Proxy Capture",
     git: "Git",
+    audit: t("audit.title"),
   };
 
   const sidebarWidth = useSettingsStore((s) => s.settings.sidebarWidth);
@@ -68,6 +70,7 @@ export function SidePanel({
         {activeView === "docs" && <ToolPanel description={t("docs.generateDesc")} actionLabel={t("docs.generateDocs")} onAction={onOpenDocs} />}
         {activeView === "proxy" && <ProxySidePanelView />}
         {activeView === "git" && <GitPanelView />}
+        {activeView === "audit" && <AuditPanel />}
       </div>
     </div>
   );

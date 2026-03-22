@@ -159,7 +159,14 @@
     "passwordGrant": "パスワード",
     "addTo": "追加先",
     "addToHeader": "ヘッダー",
-    "addToQuery": "クエリパラメータ"
+    "addToQuery": "クエリパラメータ",
+    "saml": "SAML",
+    "idpUrl": "IdP SSO URL",
+    "entityId": "SPエンティティID",
+    "assertionConsumerUrl": "アサーションコンシューマサービスURL",
+    "certificate": "IdP証明書 (PEM)",
+    "nameIdFormat": "NameIDフォーマット",
+    "samlToken": "SAMLアサーショントークン"
   },
   "response": {
     "body": "ボディ",
@@ -542,5 +549,8 @@
     "title": "削除の確認",
     "request": "\"{{name}}\" を削除しますか？",
     "collection": "コレクション \"{{name}}\" を削除しますか？コレクション全体がゴミ箱に移動されます。"
+  },
+  "audit": {
+    "title": "監査ログ"
   }
 }

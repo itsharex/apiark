@@ -11,9 +11,10 @@ import {
   MessageSquare,
   Shield,
   GitBranch,
+  ClipboardList,
 } from "lucide-react";
 
-export type ActivityView = "collections" | "environments" | "history" | "git" | "mock" | "monitor" | "docs" | "proxy";
+export type ActivityView = "collections" | "environments" | "history" | "git" | "mock" | "monitor" | "docs" | "proxy" | "audit";
 
 interface ActivityBarProps {
   activeView: ActivityView;
@@ -35,6 +36,7 @@ const BOTTOM_ITEMS: { id: ActivityView; icon: typeof Server; labelKey: string; c
   { id: "monitor", icon: Activity, labelKey: "monitor.title", color: "text-rose-400", glow: "bg-rose-400/10" },
   { id: "docs", icon: FileText, labelKey: "docs.title", color: "text-cyan-400", glow: "bg-cyan-400/10" },
   { id: "proxy", icon: Shield, labelKey: "proxy.title", color: "text-indigo-400", glow: "bg-indigo-400/10" },
+  { id: "audit", icon: ClipboardList, labelKey: "audit.title", color: "text-teal-400", glow: "bg-teal-400/10" },
 ];
 
 export function ActivityBar({

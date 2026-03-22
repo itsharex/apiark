@@ -159,7 +159,14 @@
     "passwordGrant": "비밀번호",
     "addTo": "추가 위치",
     "addToHeader": "헤더",
-    "addToQuery": "쿼리 매개변수"
+    "addToQuery": "쿼리 매개변수",
+    "saml": "SAML",
+    "idpUrl": "IdP SSO URL",
+    "entityId": "SP 엔티티 ID",
+    "assertionConsumerUrl": "어설션 소비자 서비스 URL",
+    "certificate": "IdP 인증서 (PEM)",
+    "nameIdFormat": "NameID 형식",
+    "samlToken": "SAML 어설션 토큰"
   },
   "response": {
     "body": "본문",
@@ -542,5 +549,8 @@
     "title": "삭제 확인",
     "request": "\"{{name}}\"을(를) 삭제하시겠습니까?",
     "collection": "컬렉션 \"{{name}}\"을(를) 삭제하시겠습니까? 전체 컬렉션이 휴지통으로 이동됩니다."
+  },
+  "audit": {
+    "title": "감사 로그"
   }
 }

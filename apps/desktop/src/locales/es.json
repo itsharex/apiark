@@ -159,7 +159,14 @@
     "passwordGrant": "Contraseña",
     "addTo": "Agregar A",
     "addToHeader": "Encabezado",
-    "addToQuery": "Parámetro de Consulta"
+    "addToQuery": "Parámetro de Consulta",
+    "saml": "SAML",
+    "idpUrl": "URL SSO del IdP",
+    "entityId": "ID de Entidad del SP",
+    "assertionConsumerUrl": "URL del Servicio de Consumo de Aserciones",
+    "certificate": "Certificado del IdP (PEM)",
+    "nameIdFormat": "Formato NameID",
+    "samlToken": "Token de Aserción SAML"
   },
   "response": {
     "body": "Cuerpo",
@@ -542,5 +549,8 @@
     "title": "Confirmar Eliminación",
     "request": "¿Eliminar \"{{name}}\"?",
     "collection": "¿Eliminar la colección \"{{name}}\"? Esto moverá toda la colección a la papelera."
+  },
+  "audit": {
+    "title": "Registros de Auditoría"
   }
 }

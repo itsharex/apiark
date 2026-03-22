@@ -159,7 +159,14 @@
     "passwordGrant": "Senha",
     "addTo": "Adicionar A",
     "addToHeader": "Cabeçalho",
-    "addToQuery": "Parâmetro de Consulta"
+    "addToQuery": "Parâmetro de Consulta",
+    "saml": "SAML",
+    "idpUrl": "URL SSO do IdP",
+    "entityId": "ID da Entidade do SP",
+    "assertionConsumerUrl": "URL do Serviço Consumidor de Asserções",
+    "certificate": "Certificado do IdP (PEM)",
+    "nameIdFormat": "Formato NameID",
+    "samlToken": "Token de Asserção SAML"
   },
   "response": {
     "body": "Corpo",
@@ -542,5 +549,8 @@
     "title": "Confirmar Exclusão",
     "request": "Excluir \"{{name}}\"?",
     "collection": "Excluir a coleção \"{{name}}\"? Isso moverá toda a coleção para a lixeira."
+  },
+  "audit": {
+    "title": "Logs de Auditoria"
   }
 }

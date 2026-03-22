@@ -628,6 +628,21 @@ fn interpolate_auth(auth: &AuthConfig, vars: &HashMap<String, String>) -> AuthCo
             domain: interpolation::interpolate(domain, vars),
             workstation: interpolation::interpolate(workstation, vars),
         },
+        AuthConfig::Saml {
+            idp_url,
+            entity_id,
+            assertion_consumer_url,
+            certificate,
+            name_id_format,
+            saml_token,
+        } => AuthConfig::Saml {
+            idp_url: interpolation::interpolate(idp_url, vars),
+            entity_id: interpolation::interpolate(entity_id, vars),
+            assertion_consumer_url: interpolation::interpolate(assertion_consumer_url, vars),
+            certificate: interpolation::interpolate(certificate, vars),
+            name_id_format: name_id_format.clone(),
+            saml_token: interpolation::interpolate(saml_token, vars),
+        },
     }
 }
 

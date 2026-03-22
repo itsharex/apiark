@@ -612,6 +612,17 @@ function AuthEditor({
                 workstation: "",
               });
               break;
+            case "saml":
+              onChange({
+                type: "saml",
+                idpUrl: "",
+                entityId: "",
+                assertionConsumerUrl: "",
+                certificate: "",
+                nameIdFormat: "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+                samlToken: "",
+              });
+              break;
           }
         }}
         className={SELECT_CLASS}
@@ -625,6 +636,7 @@ function AuthEditor({
         <option value="aws-v4">{t("auth.awsV4")}</option>
         <option value="jwt-bearer">{t("auth.jwtBearer")}</option>
         <option value="ntlm">{t("auth.ntlm")}</option>
+        <option value="saml">{t("auth.saml")}</option>
       </select>
 
       {/* Auth fields */}
@@ -817,6 +829,53 @@ function AuthEditor({
             value={auth.workstation}
             onChange={(e) => onChange({ ...auth, workstation: e.target.value })}
             placeholder={t("auth.workstation")}
+            className={INPUT_CLASS}
+          />
+        </div>
+      )}
+
+      {auth.type === "saml" && (
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={auth.idpUrl}
+            onChange={(e) => onChange({ ...auth, idpUrl: e.target.value })}
+            placeholder={t("auth.idpUrl")}
+            className={INPUT_CLASS}
+          />
+          <input
+            type="text"
+            value={auth.entityId}
+            onChange={(e) => onChange({ ...auth, entityId: e.target.value })}
+            placeholder={t("auth.entityId")}
+            className={INPUT_CLASS}
+          />
+          <input
+            type="text"
+            value={auth.assertionConsumerUrl}
+            onChange={(e) => onChange({ ...auth, assertionConsumerUrl: e.target.value })}
+            placeholder={t("auth.assertionConsumerUrl")}
+            className={INPUT_CLASS}
+          />
+          <textarea
+            value={auth.certificate}
+            onChange={(e) => onChange({ ...auth, certificate: e.target.value })}
+            placeholder={t("auth.certificate")}
+            rows={3}
+            className={INPUT_CLASS + " resize-y font-mono"}
+          />
+          <input
+            type="text"
+            value={auth.nameIdFormat}
+            onChange={(e) => onChange({ ...auth, nameIdFormat: e.target.value })}
+            placeholder={t("auth.nameIdFormat")}
+            className={INPUT_CLASS}
+          />
+          <input
+            type="text"
+            value={auth.samlToken}
+            onChange={(e) => onChange({ ...auth, samlToken: e.target.value })}
+            placeholder={t("auth.samlToken")}
             className={INPUT_CLASS}
           />
         </div>

@@ -1,12 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useTabStore, useActiveTab } from "@/stores/tab-store";
 import { grpcLoadProto, grpcCallUnary, grpcCallServerStream, grpcCallClientStream, grpcCallBidiStream } from "@/lib/tauri-api";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { GrpcState } from "@apiark/types";
-import { Upload, Send, Loader2, Trash2, ArrowDown, ArrowUp, Plus, X } from "lucide-react";
+import type { GrpcState, GrpcMethodInfo } from "@apiark/types";
+import { Upload, Send, Loader2, Trash2, ArrowDown, ArrowUp, Plus, X, Search, ChevronDown, ChevronRight } from "lucide-react";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { UrlBar } from "@/components/request/url-bar";
+import { KeyValueEditor } from "@/components/request/key-value-editor";
 
 interface StreamMessage {
   body: string;
@@ -15,6 +16,15 @@ interface StreamMessage {
   direction?: "sent" | "received";
 }
 
+const CALL_TYPE_ORDER = ["unary", "serverStreaming", "clientStreaming", "bidiStreaming"] as const;
+
+const CALL_TYPE_GROUP_LABELS: Record<string, string> = {
+  unary: "Unary",
+  serverStreaming: "Server Streaming",
+  clientStreaming: "Client Streaming",
+  bidiStreaming: "Bidirectional Streaming",
+};
+
 export function GrpcView() {
   const { t } = useTranslation();
   const tab = useActiveTab();
@@ -22,6 +32,9 @@ export function GrpcView() {
   const [streaming, setStreaming] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const [clientMessages, setClientMessages] = useState<string[]>(['{}']);
+  const [methodFilter, setMethodFilter] = useState("");
+  const [showMetadata, setShowMetadata] = useState(false);
+  const [showResponseMeta, setShowResponseMeta] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -165,6 +178,9 @@ export function GrpcView() {
     }
   };
 
+  const metadataCount = grpc.metadata.filter((m) => m.key.trim()).length;
+  const responseMetadata = grpc.response?.metadata ?? [];
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <Breadcrumb />
@@ -195,11 +211,11 @@ export function GrpcView() {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left panel: service/method selection + request */}
+        {/* Left panel: service/method selection + metadata + request */}
         <div className="flex w-1/2 flex-col border-r border-[var(--color-border)]">
-          {/* Service & Method selector */}
+          {/* Service selector */}
           {grpc.services.length > 0 && (
-            <div className="flex gap-2 border-b border-[var(--color-border)] px-3 py-2">
+            <div className="border-b border-[var(--color-border)] px-3 py-2">
               <select
                 value={grpc.selectedService ?? ""}
                 onChange={(e) => {
@@ -208,35 +224,51 @@ export function GrpcView() {
                     selectedService: e.target.value,
                     selectedMethod: svc?.methods[0]?.name ?? null,
                   });
+                  setMethodFilter("");
                 }}
-                className="flex-1 rounded bg-[var(--color-elevated)] px-2 py-1 text-xs text-[var(--color-text-primary)] outline-none"
+                className="w-full rounded bg-[var(--color-elevated)] px-2 py-1 text-xs text-[var(--color-text-primary)] outline-none"
               >
                 {grpc.services.map((s) => (
                   <option key={s.fullName} value={s.fullName}>{s.fullName}</option>
                 ))}
               </select>
-              <select
-                value={grpc.selectedMethod ?? ""}
-                onChange={(e) => updateGrpc({ selectedMethod: e.target.value })}
-                className="flex-1 rounded bg-[var(--color-elevated)] px-2 py-1 text-xs text-[var(--color-text-primary)] outline-none"
-              >
-                {selectedSvc?.methods.map((m) => (
-                  <option key={m.name} value={m.name}>
-                    {m.name} ({m.callType})
-                  </option>
-                ))}
-              </select>
             </div>
           )}
 
-          {/* Method info */}
-          {selectedMtd && (
-            <div className="flex items-center gap-2 border-b border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-text-muted)]">
-              <CallTypeBadge callType={callType} />
-              <span>Input: {selectedMtd.inputType}</span>
-              <span>Output: {selectedMtd.outputType}</span>
-            </div>
+          {/* Method browser */}
+          {selectedSvc && selectedSvc.methods.length > 0 && (
+            <MethodBrowser
+              methods={selectedSvc.methods}
+              selectedMethod={grpc.selectedMethod}
+              onSelectMethod={(name) => updateGrpc({ selectedMethod: name })}
+              filter={methodFilter}
+              onFilterChange={setMethodFilter}
+            />
           )}
+
+          {/* Metadata (collapsible) */}
+          <div className="border-b border-[var(--color-border)]">
+            <button
+              onClick={() => setShowMetadata(!showMetadata)}
+              className="flex w-full items-center gap-1 px-3 py-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+            >
+              {showMetadata ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              Metadata
+              {metadataCount > 0 && (
+                <span className="text-[10px]">({metadataCount})</span>
+              )}
+            </button>
+            {showMetadata && (
+              <div className="px-3 pb-2">
+                <KeyValueEditor
+                  pairs={grpc.metadata}
+                  onChange={(pairs) => updateGrpc({ metadata: pairs })}
+                  keyPlaceholder="Key"
+                  valuePlaceholder="Value"
+                />
+              </div>
+            )}
+          </div>
 
           {/* Request JSON editor */}
           <div className="flex-1 overflow-auto p-3">
@@ -379,6 +411,33 @@ export function GrpcView() {
                 </span>
                 <span className="text-xs text-[var(--color-text-muted)]">{grpc.response.timeMs}ms</span>
               </div>
+
+              {/* Response metadata/trailers */}
+              {responseMetadata.length > 0 && (
+                <div className="border-b border-[var(--color-border)]">
+                  <button
+                    onClick={() => setShowResponseMeta(!showResponseMeta)}
+                    className="flex w-full items-center gap-1 px-3 py-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                  >
+                    {showResponseMeta ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                    Response Metadata
+                    <span className="text-[10px]">({responseMetadata.length})</span>
+                  </button>
+                  {showResponseMeta && (
+                    <div className="px-3 pb-2">
+                      <div className="space-y-0.5">
+                        {responseMetadata.map((entry, i) => (
+                          <div key={i} className="grid grid-cols-[1fr_2fr] gap-2 text-xs">
+                            <span className="truncate font-medium text-[var(--color-text-secondary)]">{entry.key}</span>
+                            <span className="truncate font-mono text-[var(--color-text-primary)]">{entry.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex-1 overflow-auto p-3">
                 <pre className="whitespace-pre-wrap break-all font-mono text-sm text-[var(--color-text-primary)]">
                   {tryFormatJson(grpc.response.body)}
@@ -402,6 +461,118 @@ export function GrpcView() {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Method browser with search filter and call-type grouping */
+function MethodBrowser({
+  methods,
+  selectedMethod,
+  onSelectMethod,
+  filter,
+  onFilterChange,
+}: {
+  methods: GrpcMethodInfo[];
+  selectedMethod: string | null;
+  onSelectMethod: (name: string) => void;
+  filter: string;
+  onFilterChange: (value: string) => void;
+}) {
+  const showFilter = methods.length > 5;
+
+  const filtered = useMemo(() => {
+    if (!filter.trim()) return methods;
+    const lower = filter.toLowerCase();
+    return methods.filter(
+      (m) =>
+        m.name.toLowerCase().includes(lower) ||
+        m.inputType.toLowerCase().includes(lower) ||
+        m.outputType.toLowerCase().includes(lower),
+    );
+  }, [methods, filter]);
+
+  // Group by call type
+  const grouped = useMemo(() => {
+    const groups: Record<string, GrpcMethodInfo[]> = {};
+    for (const m of filtered) {
+      const ct = m.callType;
+      if (!groups[ct]) groups[ct] = [];
+      groups[ct].push(m);
+    }
+    return groups;
+  }, [filtered]);
+
+  const sortedTypes = CALL_TYPE_ORDER.filter((ct) => grouped[ct] && grouped[ct].length > 0);
+
+  return (
+    <div className="border-b border-[var(--color-border)]">
+      {/* Search filter */}
+      {showFilter && (
+        <div className="flex items-center gap-1.5 border-b border-[var(--color-border)] px-3 py-1.5">
+          <Search className="h-3 w-3 text-[var(--color-text-dimmed)]" />
+          <input
+            type="text"
+            value={filter}
+            onChange={(e) => onFilterChange(e.target.value)}
+            placeholder="Filter methods..."
+            className="flex-1 bg-transparent text-xs text-[var(--color-text-primary)] placeholder-[var(--color-text-dimmed)] outline-none"
+          />
+          {filter && (
+            <button
+              onClick={() => onFilterChange("")}
+              className="rounded p-0.5 text-[var(--color-text-dimmed)] hover:text-[var(--color-text-secondary)]"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Grouped method list */}
+      <div className="max-h-48 overflow-auto">
+        {filtered.length === 0 ? (
+          <div className="px-3 py-2 text-xs text-[var(--color-text-dimmed)]">
+            No methods match &quot;{filter}&quot;
+          </div>
+        ) : (
+          sortedTypes.map((ct) => (
+            <div key={ct}>
+              {/* Group header -- only show if multiple groups */}
+              {sortedTypes.length > 1 && (
+                <div className="flex items-center gap-1.5 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-dimmed)]">
+                  <CallTypeBadge callType={ct} />
+                  <span>{CALL_TYPE_GROUP_LABELS[ct]}</span>
+                </div>
+              )}
+              {grouped[ct].map((m) => (
+                <button
+                  key={m.name}
+                  onClick={() => onSelectMethod(m.name)}
+                  className={`flex w-full flex-col gap-0.5 px-3 py-1.5 text-left transition-colors hover:bg-[var(--color-elevated)] ${
+                    m.name === selectedMethod
+                      ? "bg-[var(--color-elevated)] border-l-2 border-l-[var(--color-accent)]"
+                      : "border-l-2 border-l-transparent"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {sortedTypes.length <= 1 && <CallTypeBadge callType={m.callType} />}
+                    <span className="text-xs font-medium text-[var(--color-text-primary)]">{m.name}</span>
+                  </div>
+                  <div className="flex items-center gap-3 pl-0.5 text-[10px] text-[var(--color-text-dimmed)]">
+                    <span>
+                      <span className="text-[var(--color-text-muted)]">In:</span> {m.inputType}
+                    </span>
+                    <span>
+                      <span className="text-[var(--color-text-muted)]">Out:</span> {m.outputType}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

@@ -879,3 +879,25 @@ export async function gitLog(collectionPath: string, limit?: number): Promise<Gi
 export async function gitInit(collectionPath: string): Promise<string> {
   return await invoke<string>("git_init", { collectionPath });
 }
+
+// ── Audit Logs ──
+
+export interface AuditEntry {
+  id: number;
+  action: string;
+  target: string;
+  detail: string;
+  timestamp: string;
+}
+
+export async function getAuditLogs(limit?: number, offset?: number): Promise<AuditEntry[]> {
+  return await invoke<AuditEntry[]>("audit_get_logs", { limit: limit ?? 100, offset: offset ?? 0 });
+}
+
+export async function clearAuditLogs(): Promise<void> {
+  return await invoke<void>("audit_clear", {});
+}
+
+export async function logAuditAction(action: string, target: string, detail?: string): Promise<void> {
+  return await invoke<void>("audit_log_action", { action, target, detail: detail ?? null });
+}

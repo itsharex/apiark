@@ -21,6 +21,7 @@ mod websocket;
 use std::sync::{Arc, Mutex};
 
 use commands::ai::{ai_generate_request, ai_generate_tests};
+use commands::audit::{audit_clear, audit_get_logs, audit_log_action, AuditState};
 use commands::backup::{export_app_state, import_app_state};
 use commands::collection::{
     create_collection, create_folder, create_request, create_sample_collection, delete_item,
@@ -84,6 +85,7 @@ use oauth::OAuthTokenStore;
 use plugins::manager::PluginManager;
 use proxy::capture::ProxyCaptureManager;
 use scheduler::monitor::MonitorManager;
+use storage::audit::AuditDb;
 use storage::history::HistoryDb;
 use storage::settings;
 use tauri::Manager;
@@ -180,7 +182,28 @@ pub fn run() {
     let app_settings = settings::load_settings(&settings_path);
     tracing::info!("Settings loaded (theme: {})", app_settings.theme);
 
+    // Initialize audit database
+    let audit_db_path = apiark_dir.join("audit.db");
+    let audit_db = match AuditDb::open(&audit_db_path) {
+        Ok(db) => Arc::new(db),
+        Err(e) => {
+            tracing::error!("Failed to open audit database: {e}");
+            if audit_db_path.exists() {
+                let backup = audit_db_path.with_extension(format!(
+                    "db.corrupt.{}",
+                    chrono::Utc::now().format("%Y%m%d_%H%M%S")
+                ));
+                let _ = std::fs::rename(&audit_db_path, &backup);
+                tracing::info!("Renamed corrupt audit DB to {}", backup.display());
+            }
+            Arc::new(
+                AuditDb::open(&audit_db_path).expect("Failed to create fresh audit database"),
+            )
+        }
+    };
+
     let app_state = AppState { history_db };
+    let audit_state = AuditState { audit_db };
     let settings_state = SettingsState {
         settings: Mutex::new(app_settings),
         settings_path,
@@ -203,6 +226,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(app_state)
+        .manage(audit_state)
         .manage(settings_state)
         .manage(license_state)
         .manage(WsManager::new())
@@ -355,6 +379,10 @@ pub fn run() {
             // AI commands
             ai_generate_request,
             ai_generate_tests,
+            // Audit commands
+            audit_get_logs,
+            audit_clear,
+            audit_log_action,
             // Terminal commands
             terminal_create,
             terminal_write,

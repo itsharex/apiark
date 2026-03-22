@@ -159,7 +159,14 @@
     "passwordGrant": "Passwort",
     "addTo": "Hinzufügen Zu",
     "addToHeader": "Header",
-    "addToQuery": "Query-Parameter"
+    "addToQuery": "Query-Parameter",
+    "saml": "SAML",
+    "idpUrl": "IdP SSO-URL",
+    "entityId": "SP Entity-ID",
+    "assertionConsumerUrl": "Assertion Consumer Service URL",
+    "certificate": "IdP-Zertifikat (PEM)",
+    "nameIdFormat": "NameID-Format",
+    "samlToken": "SAML-Assertion-Token"
   },
   "response": {
     "body": "Body",
@@ -542,5 +549,8 @@
     "title": "Löschen Bestätigen",
     "request": "\"{{name}}\" löschen?",
     "collection": "Sammlung \"{{name}}\" löschen? Die gesamte Sammlung wird in den Papierkorb verschoben."
+  },
+  "audit": {
+    "title": "Audit-Protokolle"
   }
 }

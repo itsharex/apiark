@@ -90,6 +90,15 @@ export type AuthConfig =
       algorithm: string;
       payload: string;
       headerPrefix: string;
+    }
+  | {
+      type: "saml";
+      idpUrl: string;
+      entityId: string;
+      assertionConsumerUrl: string;
+      certificate: string;
+      nameIdFormat: string;
+      samlToken: string;
     };
 
 export interface OAuthTokenStatus {

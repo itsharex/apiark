@@ -159,7 +159,14 @@
     "passwordGrant": "كلمة المرور",
     "addTo": "إضافة إلى",
     "addToHeader": "الترويسة",
-    "addToQuery": "معامل الاستعلام"
+    "addToQuery": "معامل الاستعلام",
+    "saml": "SAML",
+    "idpUrl": "عنوان SSO لموفر الهوية",
+    "entityId": "معرف كيان مقدم الخدمة",
+    "assertionConsumerUrl": "عنوان خدمة مستهلك التأكيد",
+    "certificate": "شهادة موفر الهوية (PEM)",
+    "nameIdFormat": "تنسيق NameID",
+    "samlToken": "رمز تأكيد SAML"
   },
   "response": {
     "body": "المحتوى",
@@ -542,5 +549,8 @@
     "title": "تأكيد الحذف",
     "request": "حذف \"{{name}}\"؟",
     "collection": "حذف المجموعة \"{{name}}\"؟ سيتم نقل المجموعة بالكامل إلى سلة المحذوفات."
+  },
+  "audit": {
+    "title": "سجلات التدقيق"
   }
 }
