@@ -34,7 +34,10 @@ use commands::environment::{
     get_resolved_variables, load_environments, load_root_dotenv, save_environment,
 };
 use commands::greet;
-use commands::grpc::{grpc_call_unary, grpc_disconnect, grpc_load_proto};
+use commands::grpc::{
+    grpc_call_bidi_stream, grpc_call_client_stream, grpc_call_server_stream, grpc_call_unary,
+    grpc_disconnect, grpc_load_proto,
+};
 use commands::history::{
     clear_history, delete_history_entry, get_history, search_history, AppState,
 };
@@ -293,6 +296,9 @@ pub fn run() {
             // gRPC commands
             grpc_load_proto,
             grpc_call_unary,
+            grpc_call_server_stream,
+            grpc_call_client_stream,
+            grpc_call_bidi_stream,
             grpc_disconnect,
             // Cookie Jar commands
             get_cookie_jar,

@@ -405,6 +405,53 @@ export async function grpcCallUnary(
   }
 }
 
+export async function grpcCallServerStream(
+  connectionId: string,
+  address: string,
+  serviceName: string,
+  methodName: string,
+  requestJson: string,
+  metadata: import("@apiark/types").GrpcMetadataEntry[],
+): Promise<void> {
+  return await invoke<void>("grpc_call_server_stream", {
+    connectionId, address, serviceName, methodName, requestJson, metadata,
+  });
+}
+
+export async function grpcCallClientStream(
+  connectionId: string,
+  address: string,
+  serviceName: string,
+  methodName: string,
+  messagesJson: string[],
+  metadata: import("@apiark/types").GrpcMetadataEntry[],
+): Promise<import("@apiark/types").GrpcResponse> {
+  try {
+    return await invoke<import("@apiark/types").GrpcResponse>("grpc_call_client_stream", {
+      connectionId, address, serviceName, methodName, messagesJson, metadata,
+    });
+  } catch (err) {
+    handleTauriError(err);
+  }
+}
+
+export async function grpcCallBidiStream(
+  connectionId: string,
+  address: string,
+  serviceName: string,
+  methodName: string,
+  messagesJson: string[],
+  metadata: import("@apiark/types").GrpcMetadataEntry[],
+): Promise<import("@apiark/types").GrpcResponse> {
+  try {
+    return await invoke<import("@apiark/types").GrpcResponse>("grpc_call_bidi_stream", {
+      connectionId, address, serviceName, methodName, messagesJson, metadata,
+    });
+  } catch (err) {
+    handleTauriError(err);
+  }
+}
+
 export async function grpcDisconnect(address: string): Promise<void> {
   return await invoke<void>("grpc_disconnect", { address });
 }

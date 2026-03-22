@@ -55,6 +55,7 @@ jsonwebtoken = "9"
 hex = "0.4"
 notify = { version = "7", features = ["macos_fsevent"] }
 notify-debouncer-mini = "0.5"
+bytes = "1"
 tonic = { version = "0.12", features = ["transport", "tls"] }
 prost = "0.13"
 prost-types = "0.13"
