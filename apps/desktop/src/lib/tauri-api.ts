@@ -561,7 +561,7 @@ export async function updateSettings(
 // ── License ──
 
 export interface LicenseStatus {
-  tier: "free" | "pro" | "team";
+  tier: "free";
   email: string | null;
   expiresAt: string | null;
   seats: number | null;
