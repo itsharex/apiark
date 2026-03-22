@@ -196,9 +196,7 @@ pub fn run() {
                 let _ = std::fs::rename(&audit_db_path, &backup);
                 tracing::info!("Renamed corrupt audit DB to {}", backup.display());
             }
-            Arc::new(
-                AuditDb::open(&audit_db_path).expect("Failed to create fresh audit database"),
-            )
+            Arc::new(AuditDb::open(&audit_db_path).expect("Failed to create fresh audit database"))
         }
     };
 
