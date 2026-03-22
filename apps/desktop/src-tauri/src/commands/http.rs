@@ -13,14 +13,14 @@ use crate::models::error::HttpError;
 use crate::models::request::{KeyValuePair, SendRequestParams};
 use crate::models::response::{CookieData, ResponseData};
 use crate::oauth::OAuthTokenStore;
+use crate::plugins::js_plugin::execute_js_hook;
+use crate::plugins::manager::{PluginHook, PluginManager};
 use crate::scripting::assertions::evaluate_assertions_from_yaml;
 use crate::scripting::engine::execute_script;
 use crate::scripting::{
     AssertionResult, ConsoleEntry, RequestSnapshot, ResponseSnapshot, ScriptContext, ScriptPhase,
     TestResult,
 };
-use crate::plugins::js_plugin::execute_js_hook;
-use crate::plugins::manager::{PluginHook, PluginManager};
 use crate::storage::collection;
 use crate::storage::history::HistoryEntry;
 
@@ -869,7 +869,10 @@ fn run_plugin_hooks(
 
                 console.push(ConsoleEntry {
                     level: "info".to_string(),
-                    message: format!("[plugin:{}] {} hook executed", plugin.manifest.name, hook_name),
+                    message: format!(
+                        "[plugin:{}] {} hook executed",
+                        plugin.manifest.name, hook_name
+                    ),
                 });
             }
             Err(e) => {

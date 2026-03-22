@@ -231,18 +231,6 @@ export function useSocketIo(connectionId: string): UseSocketIoReturn {
       try {
         const wsUrl = await socketioBuildUrl(url, namespace);
         await wsConnect(connectionId, { url: wsUrl, headers, protocols: [] });
-        // EIO handshake will happen automatically via ws:message events
-        // If auth is provided, we'll send it after SIO_CONNECT
-        if (auth && Object.keys(auth).length > 0) {
-          // Auth is sent as part of the CONNECT packet
-          const ns = namespace || "/";
-          const connectPacket = ns === "/"
-            ? `${EIO_MESSAGE}${SIO_CONNECT}${JSON.stringify(auth)}`
-            : `${EIO_MESSAGE}${SIO_CONNECT}${ns},${JSON.stringify(auth)}`;
-          // This will be sent after EIO_OPEN in handleRawMessage, but we store it for later
-          // Actually the CONNECT with auth needs to replace the auto-connect
-          // For simplicity, auth is handled in the EIO_OPEN handler
-        }
       } catch (err) {
         setError(String(err));
         setStatus("disconnected");

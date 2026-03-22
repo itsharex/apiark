@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   X,
-  MessageSquare,
   Send,
   Sparkles,
   FlaskConical,
@@ -15,7 +14,6 @@ import {
   Check,
   Trash2,
 } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { useActiveTab, useTabStore } from "@/stores/tab-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import {
@@ -49,7 +47,6 @@ interface AiAssistantDialogProps {
 }
 
 export function AiAssistantDialog({ open, onOpenChange }: AiAssistantDialogProps) {
-  const { t } = useTranslation();
   const tab = useActiveTab();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -144,7 +141,7 @@ export function AiAssistantDialog({ open, onOpenChange }: AiAssistantDialogProps
 
     const requestYaml = `method: ${tab.method}\nurl: ${tab.url}`;
     const responseBody = tab.response.body ?? "";
-    const responseStatus = tab.response.statusCode ?? 200;
+    const responseStatus = tab.response.status ?? 200;
 
     try {
       const result = await aiGenerateTests(params, requestYaml, responseBody, responseStatus);
