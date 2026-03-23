@@ -38,6 +38,9 @@ jobs:
             --bench assertions \
             -- --output-format bencher | tee output.txt
 
+      - name: Clean working tree before branch switch
+        run: git checkout -- .
+
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
