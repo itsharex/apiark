@@ -325,7 +325,11 @@ Decide based on the user's message: if they want a request generated, respond wi
                 "Generated **{} {}**{}",
                 generated.method,
                 generated.url,
-                generated.description.as_deref().map(|d| format!("\n{d}")).unwrap_or_default()
+                generated
+                    .description
+                    .as_deref()
+                    .map(|d| format!("\n{d}"))
+                    .unwrap_or_default()
             ),
             generated_request: Some(generated),
         })
