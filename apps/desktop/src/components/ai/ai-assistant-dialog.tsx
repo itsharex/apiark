@@ -17,7 +17,7 @@ import {
 import { useActiveTab, useTabStore } from "@/stores/tab-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import {
-  aiGenerateRequest,
+  aiChat,
   aiGenerateTests,
   type AiGenerateParams,
   type AiGeneratedRequest,
@@ -39,6 +39,7 @@ interface ChatMessage {
   generatedRequest?: AiGeneratedRequest;
   generatedTests?: { tests: string; assertions: string | null };
   error?: string;
+  runPrompt?: boolean;
 }
 
 interface AiAssistantDialogProps {
@@ -89,12 +90,12 @@ export function AiAssistantDialog({ open, onOpenChange }: AiAssistantDialogProps
     }]);
   };
 
-  const handleGenerateRequest = async () => {
+  const handleSend = async () => {
     if (!input.trim() || !isConfigured) return;
 
     const userPrompt = input.trim();
     setInput("");
-    addMessage({ role: "user", content: userPrompt, type: "request" });
+    addMessage({ role: "user", content: userPrompt, type: "chat" });
     setLoading(true);
 
     const start = Date.now();
@@ -106,12 +107,12 @@ export function AiAssistantDialog({ open, onOpenChange }: AiAssistantDialogProps
     }
 
     try {
-      const result = await aiGenerateRequest(params);
+      const result = await aiChat(params);
       addMessage({
         role: "assistant",
-        content: `Generated **${result.method} ${result.url}**${result.description ? `\n${result.description}` : ""}`,
-        type: "request",
-        generatedRequest: result,
+        content: result.message,
+        type: result.generatedRequest ? "request" : "chat",
+        generatedRequest: result.generatedRequest ?? undefined,
         debug: {
           model: params.model,
           endpoint: params.endpoint,
@@ -122,7 +123,7 @@ export function AiAssistantDialog({ open, onOpenChange }: AiAssistantDialogProps
     } catch (err) {
       addMessage({
         role: "assistant",
-        content: "Failed to generate request",
+        content: "Something went wrong",
         error: String(err),
       });
     }
@@ -195,6 +196,33 @@ export function AiAssistantDialog({ open, onOpenChange }: AiAssistantDialogProps
         t.id === state.activeTabId ? { ...t, name: req.name } : t,
       ),
     }));
+
+    // Ask if user wants to run the request
+    addMessage({
+      role: "assistant",
+      content: "Request applied! Do you want me to send it?",
+      runPrompt: true,
+    });
+  };
+
+  const handleRunRequest = async () => {
+    // Remove the run prompt message
+    setMessages((prev) => prev.filter((m) => !m.runPrompt));
+    addMessage({ role: "user", content: "Yes, run it" });
+    const store = useTabStore.getState();
+    await store.send();
+    addMessage({
+      role: "assistant",
+      content: "Done! Check the response panel for results and test outcomes.",
+    });
+  };
+
+  const handleDismissRun = () => {
+    setMessages((prev) => prev.filter((m) => !m.runPrompt));
+    addMessage({
+      role: "assistant",
+      content: "No problem, you can send it whenever you're ready.",
+    });
   };
 
   const applyTests = (tests: { tests: string; assertions: string | null }) => {
@@ -203,6 +231,13 @@ export function AiAssistantDialog({ open, onOpenChange }: AiAssistantDialogProps
     if (tests.assertions) {
       store.setAssertions(tests.assertions);
     }
+
+    // Ask if user wants to send the request to run the tests
+    addMessage({
+      role: "assistant",
+      content: "Tests applied! Want me to send the request so we can run them?",
+      runPrompt: true,
+    });
   };
 
   const handleCopy = (text: string, id: string) => {
@@ -212,7 +247,7 @@ export function AiAssistantDialog({ open, onOpenChange }: AiAssistantDialogProps
   };
 
   const handleSubmit = () => {
-    handleGenerateRequest();
+    handleSend();
   };
 
   return (
@@ -253,9 +288,9 @@ export function AiAssistantDialog({ open, onOpenChange }: AiAssistantDialogProps
           {showConfig && (
             <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-xs">
               <div className="flex items-center gap-2 mb-2">
-                <span className={`h-2 w-2 rounded-full ${isConfigured ? "bg-green-500" : "bg-red-500"}`} />
+                <span className={`h-2 w-2 rounded-full ${isConfigured ? "bg-yellow-500" : "bg-red-500"}`} />
                 <span className="text-[var(--color-text-muted)]">
-                  {isConfigured ? "Connected" : "Not configured"}
+                  {isConfigured ? "Configured — requires a valid API key to use" : "Not configured"}
                 </span>
               </div>
               <p className="text-[var(--color-text-dimmed)]">
@@ -286,10 +321,10 @@ export function AiAssistantDialog({ open, onOpenChange }: AiAssistantDialogProps
               <AlertCircle className="h-8 w-8 text-amber-400" />
               <div>
                 <p className="text-sm font-medium text-[var(--color-text-primary)]">
-                  Set up your AI provider
+                  Optional: Set up your AI provider
                 </p>
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                  Go to Settings → AI and add your OpenAI, Anthropic, or any OpenAI-compatible endpoint.
+                  This is an optional feature. To use the AI assistant, go to Settings → AI and add your own OpenAI, Anthropic, or any OpenAI-compatible API key.
                   Supports OpenAI, Ollama, LM Studio, and more.
                 </p>
               </div>
@@ -306,6 +341,8 @@ export function AiAssistantDialog({ open, onOpenChange }: AiAssistantDialogProps
                 onCopy={handleCopy}
                 onApplyRequest={applyRequest}
                 onApplyTests={applyTests}
+                onRunRequest={handleRunRequest}
+                onDismissRun={handleDismissRun}
               />
             ))}
             {loading && (
@@ -369,12 +406,16 @@ function MessageBubble({
   onCopy,
   onApplyRequest,
   onApplyTests,
+  onRunRequest,
+  onDismissRun,
 }: {
   message: ChatMessage;
   copiedId: string | null;
   onCopy: (text: string, id: string) => void;
   onApplyRequest: (req: AiGeneratedRequest) => void;
   onApplyTests: (tests: { tests: string; assertions: string | null }) => void;
+  onRunRequest: () => void;
+  onDismissRun: () => void;
 }) {
   const [showDebug, setShowDebug] = useState(false);
   const isUser = message.role === "user";
@@ -395,6 +436,24 @@ function MessageBubble({
         {/* Error */}
         {message.error && (
           <p className="mt-1 text-xs text-red-400">{message.error}</p>
+        )}
+
+        {/* Run prompt */}
+        {message.runPrompt && (
+          <div className="mt-2 flex gap-1.5">
+            <button
+              onClick={onRunRequest}
+              className="flex-1 rounded-lg bg-purple-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-purple-700"
+            >
+              Run it
+            </button>
+            <button
+              onClick={onDismissRun}
+              className="flex-1 rounded-lg bg-[var(--color-elevated)] px-2 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]"
+            >
+              I'll run it myself
+            </button>
+          </div>
         )}
 
         {/* Generated request */}

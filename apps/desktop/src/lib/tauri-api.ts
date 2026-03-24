@@ -784,6 +784,15 @@ export interface AiGeneratedTests {
   assertions: string | null;
 }
 
+export interface AiChatResponse {
+  message: string;
+  generatedRequest: AiGeneratedRequest | null;
+}
+
+export async function aiChat(params: AiGenerateParams): Promise<AiChatResponse> {
+  return await invoke<AiChatResponse>("ai_chat", { params });
+}
+
 export async function aiGenerateRequest(params: AiGenerateParams): Promise<AiGeneratedRequest> {
   return await invoke<AiGeneratedRequest>("ai_generate_request", { params });
 }

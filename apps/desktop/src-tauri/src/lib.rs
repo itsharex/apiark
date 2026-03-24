@@ -20,7 +20,7 @@ mod websocket;
 
 use std::sync::{Arc, Mutex};
 
-use commands::ai::{ai_generate_request, ai_generate_tests};
+use commands::ai::{ai_chat, ai_generate_request, ai_generate_tests};
 use commands::audit::{audit_clear, audit_get_logs, audit_log_action, AuditState};
 use commands::backup::{export_app_state, import_app_state};
 use commands::collection::{
@@ -375,6 +375,7 @@ pub fn run() {
             uninstall_plugin,
             install_plugin,
             // AI commands
+            ai_chat,
             ai_generate_request,
             ai_generate_tests,
             // Audit commands
