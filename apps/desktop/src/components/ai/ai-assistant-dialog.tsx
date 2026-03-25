@@ -248,7 +248,7 @@ export function AiAssistantDialog({ open, onOpenChange }: AiAssistantDialogProps
 
   const handleOpenSettings = () => {
     onOpenChange(false);
-    window.dispatchEvent(new CustomEvent("apiark:open-settings"));
+    window.dispatchEvent(new CustomEvent("apiark:open-settings", { detail: { section: "ai" } }));
   };
 
   const handleSubmit = () => {

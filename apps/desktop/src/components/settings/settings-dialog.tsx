@@ -314,7 +314,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             </section>
 
             {/* AI Section */}
-            <section>
+            <section id="settings-ai">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
                 AI Assistant
               </h3>
