@@ -60,34 +60,18 @@ Only respond with the JSON object, no other text."#;
         "content": params.prompt
     }));
 
-    let client = reqwest::Client::new();
-    let response = client
-        .post(format!(
-            "{}/chat/completions",
-            params.endpoint.trim_end_matches('/')
-        ))
-        .header("Authorization", format!("Bearer {}", params.api_key))
-        .header("Content-Type", "application/json")
-        .json(&serde_json::json!({
+    let url = build_ai_url(&params.endpoint);
+    let body = ai_request(
+        &url,
+        &params.api_key,
+        serde_json::json!({
             "model": params.model,
             "messages": messages,
             "temperature": 0.3,
             "max_tokens": 1000,
-        }))
-        .send()
-        .await
-        .map_err(|e| format!("Failed to call AI API: {e}"))?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        return Err(ai_error_message(status.as_u16(), &body));
-    }
-
-    let body: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse AI response: {e}"))?;
+        }),
+    )
+    .await?;
 
     let content = body
         .get("choices")
@@ -152,34 +136,18 @@ Only respond with the JSON object, no other text."#;
         serde_json::json!({ "role": "user", "content": user_content }),
     ];
 
-    let client = reqwest::Client::new();
-    let response = client
-        .post(format!(
-            "{}/chat/completions",
-            params.endpoint.trim_end_matches('/')
-        ))
-        .header("Authorization", format!("Bearer {}", params.api_key))
-        .header("Content-Type", "application/json")
-        .json(&serde_json::json!({
+    let url = build_ai_url(&params.endpoint);
+    let body = ai_request(
+        &url,
+        &params.api_key,
+        serde_json::json!({
             "model": params.model,
             "messages": messages,
             "temperature": 0.3,
             "max_tokens": 1500,
-        }))
-        .send()
-        .await
-        .map_err(|e| format!("Failed to call AI API: {e}"))?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        return Err(ai_error_message(status.as_u16(), &body));
-    }
-
-    let body: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse AI response: {e}"))?;
+        }),
+    )
+    .await?;
 
     let content = body
         .get("choices")
@@ -274,34 +242,18 @@ Decide based on the user's message: if they want a request generated, respond wi
         "content": params.prompt
     }));
 
-    let client = reqwest::Client::new();
-    let response = client
-        .post(format!(
-            "{}/chat/completions",
-            params.endpoint.trim_end_matches('/')
-        ))
-        .header("Authorization", format!("Bearer {}", params.api_key))
-        .header("Content-Type", "application/json")
-        .json(&serde_json::json!({
+    let url = build_ai_url(&params.endpoint);
+    let body = ai_request(
+        &url,
+        &params.api_key,
+        serde_json::json!({
             "model": params.model,
             "messages": messages,
             "temperature": 0.3,
             "max_tokens": 1500,
-        }))
-        .send()
-        .await
-        .map_err(|e| format!("Failed to call AI API: {e}"))?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        return Err(ai_error_message(status.as_u16(), &body));
-    }
-
-    let body: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse AI response: {e}"))?;
+        }),
+    )
+    .await?;
 
     let content = body
         .get("choices")
@@ -341,15 +293,48 @@ Decide based on the user's message: if they want a request generated, respond wi
     }
 }
 
+/// Build the full chat completions URL from the user-configured endpoint.
+fn build_ai_url(endpoint: &str) -> String {
+    format!("{}/chat/completions", endpoint.trim().trim_end_matches('/'))
+}
+
+/// Send a request to the AI provider and return the raw JSON body.
+async fn ai_request(
+    url: &str,
+    api_key: &str,
+    payload: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    let client = reqwest::Client::new();
+    let response = client
+        .post(url)
+        .header("Authorization", format!("Bearer {api_key}"))
+        .header("Content-Type", "application/json")
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to reach your AI provider at {url}: {e}"))?;
+
+    if !response.status().is_success() {
+        let status = response.status().as_u16();
+        let body = response.text().await.unwrap_or_default();
+        return Err(ai_error_message(status, &body, url));
+    }
+
+    response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse AI response: {e}"))
+}
+
 /// Produce a user-friendly error message for common AI API failures.
 /// These messages emphasize that the user must supply their own valid API key/endpoint (BYOK).
-fn ai_error_message(status: u16, body: &str) -> String {
+fn ai_error_message(status: u16, body: &str, url: &str) -> String {
     match status {
-        401 => "Authentication failed. The API key you provided is invalid or expired. Please update it in Settings → AI.".to_string(),
-        403 => "Access denied. Your API key may lack permission for the selected model. Please verify your API key and model in Settings → AI.".to_string(),
-        404 => "Endpoint not found. The AI endpoint URL you configured could not be reached. Please verify the URL in Settings → AI.".to_string(),
+        401 => format!("Authentication failed. The API key you provided is invalid or expired. Please update it in Settings → AI. (URL: {url})"),
+        403 => format!("Access denied. Your API key may lack permission for the selected model. Please verify your API key and model in Settings → AI. (URL: {url})"),
+        404 => format!("Endpoint not found at {url} — please verify the URL in Settings → AI."),
         429 => "Rate limit exceeded on your API provider. Please wait a moment and try again, or check your plan's usage limits.".to_string(),
-        _ => format!("Your AI provider returned an error ({status}). Please verify your settings in Settings → AI. Details: {body}"),
+        _ => format!("Your AI provider returned an error ({status}). Please verify your settings in Settings → AI. (URL: {url}) Details: {body}"),
     }
 }
 

@@ -326,7 +326,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   <input
                     type="text"
                     value={settings.aiEndpoint ?? ""}
-                    onChange={(e) => update({ aiEndpoint: e.target.value || null })}
+                    onChange={(e) => update({ aiEndpoint: e.target.value.trim() || null })}
                     placeholder="https://api.openai.com/v1"
                     className="w-full rounded border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-dimmed)]"
                   />

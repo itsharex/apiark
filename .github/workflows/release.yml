@@ -162,7 +162,16 @@ jobs:
 
           New-Item -ItemType Directory -Force -Path $msixDir
           New-Item -ItemType Directory -Force -Path "${msixDir}\Assets"
+
+          # Copy the main binary
           Copy-Item $binary "${msixDir}\apiark.exe"
+
+          # Copy any DLLs alongside the binary (WebView2Loader.dll, etc.)
+          $binaryParent = Split-Path $binary -Parent
+          Get-ChildItem "${binaryParent}\*.dll" -ErrorAction SilentlyContinue | ForEach-Object {
+            Write-Output "Including DLL: $($_.Name)"
+            Copy-Item $_.FullName "${msixDir}\$($_.Name)"
+          }
 
           # Generate PNG assets from icon
           Add-Type -AssemblyName System.Drawing
@@ -194,10 +203,12 @@ jobs:
               <Resource Language="en-us" />
             </Resources>
             <Dependencies>
-              <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+              <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
             </Dependencies>
             <Capabilities>
               <Capability Name="internetClient" />
+              <Capability Name="internetClientServer" />
+              <Capability Name="privateNetworkClientServer" />
               <rescap:Capability Name="runFullTrust" />
             </Capabilities>
             <Applications>
@@ -217,6 +228,10 @@ jobs:
             exit 1
           }
           Write-Output "Using MakeAppx: $($makeappx.FullName)"
+
+          # Log MSIX contents for debugging
+          Write-Output "MSIX staging contents:"
+          Get-ChildItem $msixDir -Recurse | ForEach-Object { Write-Output "  $($_.FullName)" }
 
           $outputMsix = "ApiArk_${version}_x64.msix"
           & $makeappx.FullName pack /d $msixDir /p $outputMsix /nv
